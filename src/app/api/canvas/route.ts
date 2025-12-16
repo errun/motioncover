@@ -70,8 +70,12 @@ async function getTrackInfoFromOEmbed(trackId: string) {
   }
 }
 
+type AnonTokenResult =
+  | { ok: true; token: string }
+  | { ok: false; status?: number; statusText?: string; bodyPreview?: string; error?: string };
+
 // Get anonymous access token (no client credentials required)
-async function getAnonymousToken(): Promise<string | null> {
+async function getAnonymousToken(): Promise<AnonTokenResult> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000);
 
@@ -97,17 +101,17 @@ async function getAnonymousToken(): Promise<string | null> {
       console.error(
         `[SpotifyAnon] get_access_token failed: ${response.status} ${response.statusText} bodyPreview=${bodyPreview}`
       );
-      return null;
+      return { ok: false, status: response.status, statusText: response.statusText, bodyPreview };
     }
 
     const data = (await response.json()) as { accessToken?: unknown };
-    return typeof data.accessToken === "string" && data.accessToken.length > 0
-      ? data.accessToken
-      : null;
+    const token = typeof data.accessToken === "string" && data.accessToken.length > 0 ? data.accessToken : null;
+    if (!token) return { ok: false, error: "missing accessToken in JSON" };
+    return { ok: true, token };
   } catch (error) {
     clearTimeout(timeoutId);
     console.error("[SpotifyAnon] get_access_token exception:", error);
-    return null;
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }
 }
 
@@ -279,10 +283,16 @@ export async function GET(request: NextRequest) {
 
   // Step 1: 尝试使用 Spotify 匿名 token 获取 Canvas
   log("[Canvas API] Step1: Spotify track-canvases");
-  const anonymousToken = await getAnonymousToken();
-  log(`[Canvas API] anon token: ${anonymousToken ? "ok" : "null"}`);
-  let spotifyCanvas =
-    anonymousToken ? await getCanvasFromSpotifyTrackCanvases(trackId, anonymousToken) : null;
+  const anon = await getAnonymousToken();
+  log(`[Canvas API] anon token: ${anon.ok ? "ok" : "null"}`);
+  if (!anon.ok) {
+    log(
+      `[Canvas API] anon token error: status=${anon.status ?? "?"} ${anon.statusText ?? ""} err=${
+        anon.error ?? "?"
+      }`
+    );
+  }
+  let spotifyCanvas = anon.ok ? await getCanvasFromSpotifyTrackCanvases(trackId, anon.token) : null;
   if (!spotifyCanvas) {
     log("[Canvas API] track-canvases: null (request error/timeout)");
   } else {
@@ -320,6 +330,13 @@ export async function GET(request: NextRequest) {
     log("[Canvas API] Web API token missing, skipped");
   }
 
+  const canvasNote =
+    spotifyCanvas?.canvasUrl
+      ? null
+      : anon.ok
+        ? "Canvas not available for this track (Spotify returned no canvas)."
+        : "Canvas temporarily unavailable (Spotify web player token blocked on server).";
+
   // If we have track info from Spotify API
   if (trackInfo) {
     log("[Canvas API] Responding with Spotify API data");
@@ -330,6 +347,7 @@ export async function GET(request: NextRequest) {
       album: trackInfo.album.name,
       albumArt: trackInfo.album.images[0]?.url,
       canvasUrl: spotifyCanvas?.canvasUrl || null,
+      canvasNote,
       spotifyUrl: trackInfo.external_urls.spotify,
       artistImage: null,
       artistUrl:
@@ -360,6 +378,7 @@ export async function GET(request: NextRequest) {
       album: "Unknown Album",
       albumArt: oEmbedInfo?.thumbnail_url || null,
       canvasUrl: resolvedCanvasUrl,
+      canvasNote: null,
       spotifyUrl: `https://open.spotify.com/track/${trackId}`,
       artistImage: null,
       artistUrl: null,
@@ -381,6 +400,7 @@ export async function GET(request: NextRequest) {
       album: "Unknown Album",
       albumArt: oEmbedInfo.thumbnail_url,
       canvasUrl: null,
+      canvasNote,
       spotifyUrl: `https://open.spotify.com/track/${trackId}`,
       artistUrl: null,
       _debug: debug ? debugLogs : undefined,
