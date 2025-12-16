@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
+const USER_AGENT =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+
 // Extract track ID from various Spotify URL formats
 function extractTrackId(input: string): string | null {
   // Handle spotify:track:ID format
@@ -42,7 +45,7 @@ async function getTrackInfoFromOEmbed(trackId: string) {
 
     const response = await fetch(url, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "User-Agent": USER_AGENT,
         "Accept": "application/json",
       },
       signal: controller.signal,
@@ -63,6 +66,83 @@ async function getTrackInfoFromOEmbed(trackId: string) {
   } catch (error) {
     clearTimeout(timeoutId);
     console.error("[oEmbed] 请求异常:", error);
+    return null;
+  }
+}
+
+// Get anonymous access token (no client credentials required)
+async function getAnonymousToken(): Promise<string | null> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+  try {
+    const response = await fetch(
+      "https://open.spotify.com/get_access_token?reason=transport&productType=web_player",
+      {
+        headers: {
+          "User-Agent": USER_AGENT,
+          Accept: "application/json",
+        },
+        signal: controller.signal,
+      }
+    );
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = (await response.json()) as { accessToken?: unknown };
+    return typeof data.accessToken === "string" && data.accessToken.length > 0
+      ? data.accessToken
+      : null;
+  } catch {
+    clearTimeout(timeoutId);
+    return null;
+  }
+}
+
+async function getCanvasFromSpotifyTrackCanvases(
+  trackId: string,
+  accessToken: string
+): Promise<{ canvasUrl: string | null } | null> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+  try {
+    const response = await fetch(
+      `https://spclient.wg.spotify.com/track-canvases/v0/canvases?track_ids=${encodeURIComponent(trackId)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: "application/json",
+          "User-Agent": USER_AGENT,
+          "app-platform": "WebPlayer",
+        },
+        signal: controller.signal,
+      }
+    );
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = (await response.json()) as {
+      canvases?: Array<{ canvas_url?: unknown; canvasUrl?: unknown; url?: unknown }>;
+    };
+
+    const firstCanvas = data.canvases?.[0];
+    const canvasUrl =
+      (typeof firstCanvas?.canvas_url === "string" ? firstCanvas.canvas_url : null) ||
+      (typeof firstCanvas?.canvasUrl === "string" ? firstCanvas.canvasUrl : null) ||
+      (typeof firstCanvas?.url === "string" ? firstCanvas.url : null);
+
+    return { canvasUrl: canvasUrl || null };
+  } catch {
+    clearTimeout(timeoutId);
     return null;
   }
 }
@@ -261,7 +341,7 @@ async function getCanvasFromCanvasDownloaderFetch(trackId: string): Promise<{
     // 使用更完整的浏览器 headers 来绕过 403
     const response = await fetch(url, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "User-Agent": USER_AGENT,
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
         "Accept-Language": "en-US,en;q=0.9",
         "Accept-Encoding": "gzip, deflate, br",
@@ -275,6 +355,7 @@ async function getCanvasFromCanvasDownloaderFetch(trackId: string): Promise<{
         "Sec-Fetch-Site": "none",
         "Sec-Fetch-User": "?1",
         "Upgrade-Insecure-Requests": "1",
+        Referer: "https://www.canvasdownloader.com/",
       },
       signal: controller.signal,
     });
@@ -356,6 +437,12 @@ export async function GET(request: NextRequest) {
   const canvasData = await getCanvasFromCanvasDownloader(trackId);
   log(`[Canvas API] CanvasDownloader 返回: canvasUrl=${canvasData?.canvasUrl || '无'}, artistName=${canvasData?.artistName || '无'}`);
 
+  // If CanvasDownloader is blocked (e.g. server-side 403), fall back to Spotify's internal canvases endpoint.
+  const anonymousToken = await getAnonymousToken();
+  const spotifyCanvas = anonymousToken
+    ? await getCanvasFromSpotifyTrackCanvases(trackId, anonymousToken)
+    : null;
+
   // Try to get detailed info from Spotify API
   log("[Canvas API] 📡 Step 2: 尝试从 Spotify API 获取歌曲信息...");
   const accessToken = await getSpotifyAccessToken();
@@ -378,7 +465,7 @@ export async function GET(request: NextRequest) {
       artists: trackInfo.artists.map((a: { name: string }) => a.name),
       album: trackInfo.album.name,
       albumArt: trackInfo.album.images[0]?.url,
-      canvasUrl: canvasData?.canvasUrl || null,
+      canvasUrl: canvasData?.canvasUrl || spotifyCanvas?.canvasUrl || null,
       spotifyUrl: trackInfo.external_urls.spotify,
       artistImage: canvasData?.artistImage || null,
       artistUrl:
@@ -398,18 +485,19 @@ export async function GET(request: NextRequest) {
   log(`[Canvas API] oEmbed 结果: ${oEmbedInfo ? '成功' : '失败'}`);
 
   // If we have Canvas data, use it even without full track info
-  if (canvasData?.canvasUrl) {
+  const resolvedCanvasUrl = canvasData?.canvasUrl || spotifyCanvas?.canvasUrl || null;
+  if (resolvedCanvasUrl) {
     log("[Canvas API] ✅ 有 Canvas URL，使用 Canvas 数据返回");
     const response = {
       trackId,
       name: oEmbedInfo?.title || "Unknown Track",
-      artists: canvasData.artistName ? [canvasData.artistName] : ["Unknown Artist"],
+      artists: canvasData?.artistName ? [canvasData.artistName] : ["Unknown Artist"],
       album: "Unknown Album",
       albumArt: oEmbedInfo?.thumbnail_url || null,
-      canvasUrl: canvasData.canvasUrl,
+      canvasUrl: resolvedCanvasUrl,
       spotifyUrl: `https://open.spotify.com/track/${trackId}`,
-      artistImage: canvasData.artistImage,
-      artistUrl: canvasData.artistUrl,
+      artistImage: canvasData?.artistImage || null,
+      artistUrl: canvasData?.artistUrl || null,
       _debug: debug ? debugLogs : undefined,
     };
     log("=".repeat(60));
@@ -453,4 +541,3 @@ export async function GET(request: NextRequest) {
   log("=".repeat(60));
   return NextResponse.json(response);
 }
-
