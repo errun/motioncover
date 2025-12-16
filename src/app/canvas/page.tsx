@@ -62,6 +62,7 @@ function CanvasContent() {
   const [error, setError] = useState<string | null>(null);
   const [spotifyTitle, setSpotifyTitle] = useState<string | null>(null);
   const [spotifyThumbnail, setSpotifyThumbnail] = useState<string | null>(null);
+  const [clientCanvasAttempted, setClientCanvasAttempted] = useState<string | null>(null);
 
   // 点击 Download 时强制触发文件下载，而不是在新标签页打开视频
   const handleDownloadClick = async () => {
@@ -181,12 +182,61 @@ function CanvasContent() {
 	      }
 	    };
 
-	    fetchSpotifyMeta();
+    fetchSpotifyMeta();
 
-	    return () => {
-	      cancelled = true;
-	    };
-	  }, [trackData?.trackId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [trackData?.trackId]);
+
+  // 方法1：客户端直接去 canvasdownloader 获取 Canvas（利用浏览器通过 CF 的概率更高）
+  useEffect(() => {
+    if (!trackData?.trackId) return;
+    if (trackData.canvasUrl) return;
+    if (clientCanvasAttempted === trackData.trackId) return;
+
+    let cancelled = false;
+    setClientCanvasAttempted(trackData.trackId);
+
+    const fetchClientCanvas = async () => {
+      try {
+        const url = `https://www.canvasdownloader.com/canvas?link=spotify:track:${trackData.trackId}`;
+        console.log("[ClientCanvas] start fetch", url);
+        const res = await fetch(url, { credentials: "include" });
+        console.log("[ClientCanvas] status", res.status, res.statusText);
+        if (!res.ok) return;
+        const html = await res.text();
+        const parsed = parseCanvasHtml(html);
+        if (cancelled) return;
+        if (parsed.canvasUrl) {
+          console.log("[ClientCanvas] success, got canvas", parsed.canvasUrl);
+          setTrackData((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  canvasUrl: parsed.canvasUrl || prev.canvasUrl,
+                  artists: parsed.artists ?? prev.artists,
+                  artistImage: parsed.artistImage ?? prev.artistImage,
+                  albumArt: parsed.albumArt ?? prev.albumArt,
+                }
+              : prev
+          );
+        } else {
+          console.log("[ClientCanvas] no canvas found in HTML");
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.warn("[ClientCanvas] fetch failed", err);
+        }
+      }
+    };
+
+    fetchClientCanvas();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [trackData?.trackId, trackData?.canvasUrl, clientCanvasAttempted]);
 
   if (loading) {
     return (
@@ -399,4 +449,3 @@ export default function CanvasPage() {
     </div>
   );
 }
-
