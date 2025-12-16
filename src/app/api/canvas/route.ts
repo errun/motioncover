@@ -311,45 +311,54 @@ async function getCanvasFromCanvasDownloader(trackId: string): Promise<{
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const link = searchParams.get("link");
+  const debug = searchParams.get("debug") === "true";
 
-  console.log("=".repeat(60));
-  console.log("[Canvas API] 🚀 开始处理请求");
-  console.log(`[Canvas API] 原始 link 参数: ${link}`);
+  // 调试日志收集
+  const debugLogs: string[] = [];
+  const log = (msg: string) => {
+    console.log(msg);
+    debugLogs.push(msg);
+  };
+
+  log("=".repeat(60));
+  log("[Canvas API] 🚀 开始处理请求");
+  log(`[Canvas API] 原始 link 参数: ${link}`);
+  log(`[Canvas API] 运行环境: ${process.platform}, Node ${process.version}`);
 
   if (!link) {
-    console.log("[Canvas API] ❌ 缺少 link 参数");
-    return NextResponse.json({ error: "Missing link parameter" }, { status: 400 });
+    log("[Canvas API] ❌ 缺少 link 参数");
+    return NextResponse.json({ error: "Missing link parameter", _debug: debug ? debugLogs : undefined }, { status: 400 });
   }
 
   const trackId = extractTrackId(link);
-  console.log(`[Canvas API] 解析出的 trackId: ${trackId}`);
+  log(`[Canvas API] 解析出的 trackId: ${trackId}`);
 
   if (!trackId) {
-    console.log("[Canvas API] ❌ 无效的 Spotify 链接");
-    return NextResponse.json({ error: "Invalid Spotify link" }, { status: 400 });
+    log("[Canvas API] ❌ 无效的 Spotify 链接");
+    return NextResponse.json({ error: "Invalid Spotify link", _debug: debug ? debugLogs : undefined }, { status: 400 });
   }
 
   // Try to get Canvas from canvasdownloader.com first (most reliable)
-  console.log("[Canvas API] 📡 Step 1: 从 CanvasDownloader.com 获取 Canvas...");
+  log("[Canvas API] 📡 Step 1: 从 CanvasDownloader.com 获取 Canvas...");
   const canvasData = await getCanvasFromCanvasDownloader(trackId);
-  console.log("[Canvas API] CanvasDownloader 返回结果:", JSON.stringify(canvasData, null, 2));
+  log(`[Canvas API] CanvasDownloader 返回: canvasUrl=${canvasData?.canvasUrl || '无'}, artistName=${canvasData?.artistName || '无'}`);
 
   // Try to get detailed info from Spotify API
-  console.log("[Canvas API] 📡 Step 2: 尝试从 Spotify API 获取歌曲信息...");
+  log("[Canvas API] 📡 Step 2: 尝试从 Spotify API 获取歌曲信息...");
   const accessToken = await getSpotifyAccessToken();
   let trackInfo = null;
 
   if (accessToken) {
-    console.log("[Canvas API] ✅ 有 access token，使用 Spotify API");
+    log("[Canvas API] ✅ 有 access token，使用 Spotify API");
     trackInfo = await getTrackInfoFromAPI(trackId, accessToken);
-    console.log(`[Canvas API] Spotify API 结果: ${trackInfo ? '成功' : '失败'}`);
+    log(`[Canvas API] Spotify API 结果: ${trackInfo ? '成功 - ' + trackInfo.name : '失败'}`);
   } else {
-    console.log("[Canvas API] ⚠️ 没有 access token，跳过 Spotify API");
+    log("[Canvas API] ⚠️ 没有 access token，跳过 Spotify API");
   }
 
   // If we have track info from Spotify API
   if (trackInfo) {
-    console.log("[Canvas API] ✅ 使用 Spotify API 数据返回");
+    log("[Canvas API] ✅ 使用 Spotify API 数据返回");
     const response = {
       trackId,
       name: trackInfo.name,
@@ -364,20 +373,20 @@ export async function GET(request: NextRequest) {
         (Array.isArray(trackInfo.artists) && trackInfo.artists.length > 0
           ? trackInfo.artists[0]?.external_urls?.spotify ?? null
           : null),
+      _debug: debug ? debugLogs : undefined,
     };
-    console.log("[Canvas API] 最终响应:", JSON.stringify(response, null, 2));
-    console.log("=".repeat(60));
+    log("=".repeat(60));
     return NextResponse.json(response);
   }
 
   // Fall back to oEmbed for track info
-  console.log("[Canvas API] 📡 Step 3: 降级到 oEmbed API...");
+  log("[Canvas API] 📡 Step 3: 降级到 oEmbed API...");
   const oEmbedInfo = await getTrackInfoFromOEmbed(trackId);
-  console.log(`[Canvas API] oEmbed 结果: ${oEmbedInfo ? '成功' : '失败'}`);
+  log(`[Canvas API] oEmbed 结果: ${oEmbedInfo ? '成功' : '失败'}`);
 
   // If we have Canvas data, use it even without full track info
   if (canvasData?.canvasUrl) {
-    console.log("[Canvas API] ✅ 有 Canvas URL，使用 Canvas 数据返回");
+    log("[Canvas API] ✅ 有 Canvas URL，使用 Canvas 数据返回");
     const response = {
       trackId,
       name: oEmbedInfo?.title || "Unknown Track",
@@ -388,15 +397,15 @@ export async function GET(request: NextRequest) {
       spotifyUrl: `https://open.spotify.com/track/${trackId}`,
       artistImage: canvasData.artistImage,
       artistUrl: canvasData.artistUrl,
+      _debug: debug ? debugLogs : undefined,
     };
-    console.log("[Canvas API] 最终响应:", JSON.stringify(response, null, 2));
-    console.log("=".repeat(60));
+    log("=".repeat(60));
     return NextResponse.json(response);
   }
 
   // If we have oEmbed info but no canvas
   if (oEmbedInfo) {
-    console.log("[Canvas API] ⚠️ 只有 oEmbed 数据，没有 Canvas");
+    log("[Canvas API] ⚠️ 只有 oEmbed 数据，没有 Canvas");
     const response = {
       trackId,
       name: oEmbedInfo.title || "Unknown Track",
@@ -406,14 +415,14 @@ export async function GET(request: NextRequest) {
       canvasUrl: null,
       spotifyUrl: `https://open.spotify.com/track/${trackId}`,
       artistUrl: null,
+      _debug: debug ? debugLogs : undefined,
     };
-    console.log("[Canvas API] 最终响应:", JSON.stringify(response, null, 2));
-    console.log("=".repeat(60));
+    log("=".repeat(60));
     return NextResponse.json(response);
   }
 
   // Last resort: return basic info with embed URL
-  console.log("[Canvas API] ❌ 所有方法都失败，返回网络错误");
+  log("[Canvas API] ❌ 所有方法都失败，返回网络错误");
   const response = {
     trackId,
     name: `Spotify Track`,
@@ -426,9 +435,9 @@ export async function GET(request: NextRequest) {
     networkError: true,
     error: "无法连接到 Spotify。这可能是网络问题。请检查网络连接或稍后重试。",
     artistUrl: null,
+    _debug: debug ? debugLogs : undefined,
   };
-  console.log("[Canvas API] 最终响应:", JSON.stringify(response, null, 2));
-  console.log("=".repeat(60));
+  log("=".repeat(60));
   return NextResponse.json(response);
 }
 

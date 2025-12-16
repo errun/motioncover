@@ -3,7 +3,7 @@ import Footer from "@/components/Footer";
 import SearchBox from "@/components/SearchBox";
 
 // 版本号：时间精确到分钟
-const VERSION = "v1.0.0 (2024-12-16 23:45)";
+const VERSION = "v1.0.1 (2024-12-16 17:15)";
 
 export default function Home() {
   return (
