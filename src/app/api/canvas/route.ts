@@ -82,6 +82,8 @@ async function getAnonymousToken(): Promise<string | null> {
         headers: {
           "User-Agent": USER_AGENT,
           Accept: "application/json",
+          "Accept-Language": "en-US,en;q=0.9",
+          Referer: "https://open.spotify.com/",
         },
         signal: controller.signal,
       }
@@ -90,7 +92,11 @@ async function getAnonymousToken(): Promise<string | null> {
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      console.error(`[SpotifyAnon] get_access_token failed: ${response.status} ${response.statusText}`);
+      const bodyText = await response.text().catch(() => "");
+      const bodyPreview = bodyText.slice(0, 400).replace(/\s+/g, " ").trim();
+      console.error(
+        `[SpotifyAnon] get_access_token failed: ${response.status} ${response.statusText} bodyPreview=${bodyPreview}`
+      );
       return null;
     }
 
@@ -98,8 +104,9 @@ async function getAnonymousToken(): Promise<string | null> {
     return typeof data.accessToken === "string" && data.accessToken.length > 0
       ? data.accessToken
       : null;
-  } catch {
+  } catch (error) {
     clearTimeout(timeoutId);
+    console.error("[SpotifyAnon] get_access_token exception:", error);
     return null;
   }
 }
@@ -254,8 +261,8 @@ export async function GET(request: NextRequest) {
 
   log("=".repeat(60));
   log("[Canvas API] START request");
-  log(`[Canvas API] 原始 link 参数: ${link}`);
-  log(`[Canvas API] 运行环境: ${process.platform}, Node ${process.version}`);
+  log(`[Canvas API] link: ${link}`);
+  log(`[Canvas API] runtime: ${process.platform}, Node ${process.version}`);
 
   if (!link) {
     log("[Canvas API] ERROR missing link param");
@@ -263,7 +270,7 @@ export async function GET(request: NextRequest) {
   }
 
   const trackId = extractTrackId(link);
-  log(`[Canvas API] 解析出的 trackId: ${trackId}`);
+  log(`[Canvas API] trackId: ${trackId}`);
 
   if (!trackId) {
     log("[Canvas API] ERROR invalid Spotify link");
@@ -274,7 +281,8 @@ export async function GET(request: NextRequest) {
   log("[Canvas API] Step1: Spotify track-canvases");
   const anonymousToken = await getAnonymousToken();
   log(`[Canvas API] anon token: ${anonymousToken ? "ok" : "null"}`);
-  const spotifyCanvas = anonymousToken ? await getCanvasFromSpotifyTrackCanvases(trackId, anonymousToken) : null;
+  let spotifyCanvas =
+    anonymousToken ? await getCanvasFromSpotifyTrackCanvases(trackId, anonymousToken) : null;
   if (!spotifyCanvas) {
     log("[Canvas API] track-canvases: null (request error/timeout)");
   } else {
@@ -292,6 +300,20 @@ export async function GET(request: NextRequest) {
 
   if (accessToken) {
     log("[Canvas API] Web API token ok");
+    // Fallback: if anon token is blocked, try using the client-credentials token for track-canvases.
+    if (!spotifyCanvas?.canvasUrl) {
+      log("[Canvas API] track-canvases retry with Web API token");
+      const canvasViaWebToken = await getCanvasFromSpotifyTrackCanvases(trackId, accessToken);
+      log(
+        `[Canvas API] track-canvases(web): canvasUrl=${canvasViaWebToken?.canvasUrl || "null"}, canvasesCount=${
+          canvasViaWebToken?.debug?.canvasesCount ?? "?"
+        }, status=${canvasViaWebToken?.debug?.status ?? "?"}`
+      );
+      if (canvasViaWebToken?.canvasUrl) {
+        spotifyCanvas = canvasViaWebToken;
+      }
+    }
+
     trackInfo = await getTrackInfoFromAPI(trackId, accessToken);
     log(`[Canvas API] Spotify API result: ${trackInfo ? "ok - " + trackInfo.name : "failed"}`);
   } else {
