@@ -229,9 +229,10 @@ export async function GET(request: NextRequest) {
 
   // 调试日志收集
   const debugLogs: string[] = [];
+  const sanitizeDebug = (msg: string) => msg.replace(/[^\x20-\x7E]/g, "");
   const log = (msg: string) => {
     console.log(msg);
-    debugLogs.push(msg);
+    debugLogs.push(sanitizeDebug(msg));
   };
 
   log("=".repeat(60));
