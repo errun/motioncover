@@ -337,6 +337,11 @@ async function getCanvasFromCanvasDownloaderFetch(trackId: string): Promise<{
   try {
     const url = `https://www.canvasdownloader.com/canvas?link=spotify:track:${trackId}`;
     console.log(`[FetchMethod] 请求 URL: ${url}`);
+    console.log(
+      `[FetchMethod] 环境: platform=${process.platform}, node=${process.version}, vercel=${
+        process.env.VERCEL || "false"
+      }`
+    );
 
     // 使用更完整的浏览器 headers 来绕过 403
     const response = await fetch(url, {
@@ -363,16 +368,28 @@ async function getCanvasFromCanvasDownloaderFetch(trackId: string): Promise<{
     clearTimeout(timeoutId);
 
     console.log(`[FetchMethod] 响应状态: ${response.status}`);
+    const headerKeys = ["cf-ray", "server", "via", "x-cache", "content-type"];
+    const headerDump = headerKeys
+      .map((k) => `${k}=${response.headers.get(k) || "null"}`)
+      .join(", ");
+    console.log(`[FetchMethod] 响应头关键信息: ${headerDump}`);
+
+    const bodyText = await response.text();
+    const bodyPreview = bodyText.slice(0, 600).replace(/\s+/g, " ").trim();
 
     if (!response.ok) {
-      console.error(`[FetchMethod] 请求失败: status=${response.status}, statusText=${response.statusText}`);
+      console.error(
+        `[FetchMethod] 请求失败: status=${response.status}, statusText=${response.statusText}, bodyPreview=${bodyPreview}`
+      );
       return null;
     }
 
-    const html = await response.text();
-    console.log(`[FetchMethod] 获取到 HTML，长度: ${html.length} 字符`);
+    console.log(`[FetchMethod] 获取到 HTML，长度: ${bodyText.length} 字符`);
+    if (bodyPreview) {
+      console.log(`[FetchMethod] HTML 预览: ${bodyPreview}`);
+    }
 
-    return parseCanvasDownloaderHtml(html);
+    return parseCanvasDownloaderHtml(bodyText);
   } catch (error) {
     clearTimeout(timeoutId);
     console.error("[FetchMethod] 请求异常:", error);
