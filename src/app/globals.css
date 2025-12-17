@@ -1,56 +1,223 @@
 @import "tailwindcss";
 
+/* ============================================
+   PHONK DESIGN SYSTEM - Acid Theme
+   ============================================ */
+
 :root {
-  --background: #121212;
+  /* Core Palette */
+  --phonk-black: #050505;
+  --phonk-surface: #111111;
+  --phonk-border: #333333;
+
+  /* Action Colors */
+  --phonk-acid: #39FF14;
+  --phonk-purple: #B026FF;
+  --phonk-red: #FF003C;
+
+  /* Legacy (for downloader compatibility) */
+  --background: #050505;
   --foreground: #ffffff;
   --spotify-green: #1db954;
   --spotify-green-dark: #1aa34a;
-  --card-bg: #181818;
-  --card-hover: #282828;
-  --text-muted: #b3b3b3;
+  --card-bg: #111111;
+  --card-hover: #1a1a1a;
+  --text-muted: #888888;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-spotify-green: var(--spotify-green);
+  --color-background: var(--phonk-black);
+  --color-foreground: #ffffff;
+  --color-acid: var(--phonk-acid);
+  --color-purple: var(--phonk-purple);
+  --color-red: var(--phonk-red);
+  --color-surface: var(--phonk-surface);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  background: var(--phonk-black);
+  color: #ffffff;
+  font-family: var(--font-space-mono), var(--font-mono), monospace;
   min-height: 100vh;
 }
 
-/* Custom scrollbar */
+/* Noise Texture Overlay */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+}
+
+/* Phonk Typography */
+.phonk-heading {
+  font-family: Impact, 'Arial Black', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.phonk-mono {
+  font-family: var(--font-space-mono), monospace;
+}
+
+/* HUD Border Style */
+.hud-border {
+  border: 1px solid var(--phonk-border);
+  position: relative;
+}
+
+.hud-border::before,
+.hud-border::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: var(--phonk-acid);
+  border-style: solid;
+}
+
+.hud-border::before {
+  top: -1px;
+  left: -1px;
+  border-width: 2px 0 0 2px;
+}
+
+.hud-border::after {
+  bottom: -1px;
+  right: -1px;
+  border-width: 0 2px 2px 0;
+}
+
+/* Phonk Button */
+.phonk-btn {
+  border: 2px solid var(--phonk-acid);
+  color: var(--phonk-acid);
+  background: transparent;
+  padding: 12px 32px;
+  font-family: Impact, 'Arial Black', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.phonk-btn:hover {
+  background: var(--phonk-acid);
+  color: #000;
+  box-shadow: 0 0 30px var(--phonk-acid);
+}
+
+.phonk-btn:active {
+  transform: translate(2px, 2px);
+}
+
+/* Glitch Effect */
+@keyframes glitch {
+  0%, 100% { transform: translate(0); }
+  20% { transform: translate(-2px, 2px); }
+  40% { transform: translate(-2px, -2px); }
+  60% { transform: translate(2px, 2px); }
+  80% { transform: translate(2px, -2px); }
+}
+
+.glitch-effect {
+  animation: glitch 0.3s ease infinite;
+}
+
+/* CRT Scanlines */
+.scanlines::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.1) 2px,
+    rgba(0, 0, 0, 0.1) 4px
+  );
+}
+
+/* CRT Turn Off Effect */
+@keyframes crt-off {
+  0% { transform: scale(1, 1); opacity: 1; }
+  50% { transform: scale(1, 0.01); opacity: 0.8; }
+  100% { transform: scale(0, 0); opacity: 0; }
+}
+
+.crt-off {
+  animation: crt-off 0.4s ease-out forwards;
+}
+
+/* Pulse Glow */
+@keyframes pulse-glow-acid {
+  0%, 100% { box-shadow: 0 0 20px rgba(57, 255, 20, 0.3); }
+  50% { box-shadow: 0 0 50px rgba(57, 255, 20, 0.6); }
+}
+
+.glow-acid {
+  animation: pulse-glow-acid 1.5s ease-in-out infinite;
+}
+
+/* REC Indicator */
+@keyframes blink-rec {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.rec-blink {
+  animation: blink-rec 1s step-end infinite;
+}
+
+/* VCR Timestamp Flicker */
+@keyframes vcr-flicker {
+  0%, 90%, 100% { opacity: 1; }
+  92%, 98% { opacity: 0.5; }
+}
+
+.vcr-flicker {
+  animation: vcr-flicker 3s linear infinite;
+}
+
+/* Fader Track Glow */
+.fader-glow {
+  box-shadow: 0 0 10px var(--phonk-acid);
+}
+
+/* Custom Scrollbar - Phonk Style */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--background);
+  background: var(--phonk-black);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #535353;
-  border-radius: 4px;
+  background: var(--phonk-border);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #636363;
+  background: var(--phonk-acid);
 }
 
-/* Animations */
+/* Legacy glow effect */
 @keyframes pulse-glow {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(29, 185, 84, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 40px rgba(29, 185, 84, 0.5);
-  }
+  0%, 100% { box-shadow: 0 0 20px rgba(29, 185, 84, 0.3); }
+  50% { box-shadow: 0 0 40px rgba(29, 185, 84, 0.5); }
 }
 
 .glow-effect {

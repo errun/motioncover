@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920" width="1080" height="1920">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#050505"/>
+      <stop offset="50%" style="stop-color:#111111"/>
+      <stop offset="100%" style="stop-color:#050505"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#39FF14;stop-opacity:0.3"/>
+      <stop offset="50%" style="stop-color:#B026FF;stop-opacity:0.2"/>
+      <stop offset="100%" style="stop-color:#FF003C;stop-opacity:0.3"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1080" height="1920" fill="url(#bg)"/>
+  
+  <!-- Grid pattern -->
+  <g stroke="#333" stroke-width="1" opacity="0.3">
+    <line x1="0" y1="480" x2="1080" y2="480"/>
+    <line x1="0" y1="960" x2="1080" y2="960"/>
+    <line x1="0" y1="1440" x2="1080" y2="1440"/>
+    <line x1="270" y1="0" x2="270" y2="1920"/>
+    <line x1="540" y1="0" x2="540" y2="1920"/>
+    <line x1="810" y1="0" x2="810" y2="1920"/>
+  </g>
+  
+  <!-- Glow overlay -->
+  <rect width="1080" height="1920" fill="url(#glow)" opacity="0.5"/>
+  
+  <!-- Center content -->
+  <g transform="translate(540, 960)">
+    <!-- Phonk logo circle -->
+    <circle cx="0" cy="0" r="200" fill="none" stroke="#39FF14" stroke-width="3" opacity="0.6"/>
+    <circle cx="0" cy="0" r="180" fill="none" stroke="#B026FF" stroke-width="2" opacity="0.4"/>
+    
+    <!-- Play icon -->
+    <polygon points="80,0 -40,-70 -40,70" fill="#39FF14" opacity="0.8"/>
+    
+    <!-- Text -->
+    <text x="0" y="320" text-anchor="middle" fill="#39FF14" font-family="Impact, sans-serif" font-size="48" letter-spacing="8">
+      UPLOAD YOUR
+    </text>
+    <text x="0" y="380" text-anchor="middle" fill="#fff" font-family="Impact, sans-serif" font-size="64" letter-spacing="10">
+      COVER IMAGE
+    </text>
+  </g>
+  
+  <!-- Corner decorations -->
+  <path d="M0,0 L80,0 L80,10 L10,10 L10,80 L0,80 Z" fill="#39FF14"/>
+  <path d="M1080,0 L1000,0 L1000,10 L1070,10 L1070,80 L1080,80 Z" fill="#39FF14"/>
+  <path d="M0,1920 L80,1920 L80,1910 L10,1910 L10,1840 L0,1840 Z" fill="#39FF14"/>
+  <path d="M1080,1920 L1000,1920 L1000,1910 L1070,1910 L1070,1840 L1080,1840 Z" fill="#39FF14"/>
+</svg>
+
