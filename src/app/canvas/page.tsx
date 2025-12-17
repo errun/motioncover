@@ -5,6 +5,7 @@ import { useEffect, useState, Suspense } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Image from "next/image";
+import { extractTrackId } from "@/lib/linkResolver";
 
 interface TrackData {
   trackId: string;
@@ -19,25 +20,7 @@ interface TrackData {
   networkError?: boolean;
   error?: string;
   artistImage?: string;
-	  artistUrl?: string;
-}
-
-// Extract track ID from Spotify link
-function extractTrackId(input: string): string | null {
-  if (input.startsWith("spotify:track:")) {
-    return input.split(":")[2];
-  }
-  const patterns = [
-    /spotify\.com\/track\/([a-zA-Z0-9]+)/,
-    /spotify\.com\/intl-[a-z]+\/track\/([a-zA-Z0-9]+)/,
-    /open\.spotify\.com\/track\/([a-zA-Z0-9]+)/,
-  ];
-  for (const pattern of patterns) {
-    const match = input.match(pattern);
-    if (match) return match[1];
-  }
-  if (/^[a-zA-Z0-9]{22}$/.test(input)) return input;
-  return null;
+  artistUrl?: string;
 }
 
 // Parse canvas data from HTML

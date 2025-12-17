@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import ControlDeck from "@/components/visualizer/ControlDeck";
 import ViewportFrame from "@/components/visualizer/ViewportFrame";
 import AudioPlayer from "@/components/visualizer/AudioPlayer";
+import { DevToolPanel } from "@/features/visualizer/components";
 
 // Dynamically import 3D canvas to avoid SSR issues
 const VisualizerCanvas = dynamic(
@@ -24,6 +25,9 @@ export default function CockpitPage() {
       className="fixed inset-0 flex flex-col lg:flex-row overflow-hidden"
       style={{ background: "#050505" }}
     >
+      {/* DevTool Panel (开发环境) */}
+      <DevToolPanel />
+
       {/* Main Viewport Area - Smaller on mobile to leave room for controls */}
       <div className="h-[45vh] lg:h-auto lg:flex-1 flex items-center justify-center p-2 lg:p-8 flex-shrink-0">
         <ViewportFrame>

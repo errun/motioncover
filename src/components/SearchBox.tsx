@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { parseSpotifyInput } from "@/lib/linkResolver";
 
 export default function SearchBox() {
   const [query, setQuery] = useState("");
@@ -13,13 +14,22 @@ export default function SearchBox() {
     if (!query.trim()) return;
 
     setIsLoading(true);
-    
-    // Check if it's a Spotify link
-    if (query.includes("spotify.com") || query.includes("spotify:")) {
+
+    // 使用统一的链接解析服务
+    const parsed = parseSpotifyInput(query.trim());
+
+    if (parsed.type === 'track' && parsed.id) {
+      // 直接跳转到 canvas 页面
       router.push(`/canvas?link=${encodeURIComponent(query.trim())}`);
-    } else {
-      // It's a search query
+    } else if (parsed.type === 'artist' && parsed.id) {
+      // 艺术家页面
+      router.push(`/artist/${parsed.id}`);
+    } else if (parsed.type === 'search') {
+      // 搜索查询
       router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+    } else {
+      // 其他 Spotify 链接，尝试作为 track 处理
+      router.push(`/canvas?link=${encodeURIComponent(query.trim())}`);
     }
   };
 

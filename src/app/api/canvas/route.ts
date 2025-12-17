@@ -1,36 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { extractTrackId } from "@/lib/linkResolver";
 
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
-
-// Extract track ID from various Spotify URL formats
-function extractTrackId(input: string): string | null {
-  // Handle spotify:track:ID format
-  if (input.startsWith("spotify:track:")) {
-    return input.split(":")[2];
-  }
-
-  // Handle various URL formats
-  const patterns = [
-    /spotify\.com\/track\/([a-zA-Z0-9]+)/,
-    /spotify\.com\/intl-[a-z]+\/track\/([a-zA-Z0-9]+)/,
-    /open\.spotify\.com\/track\/([a-zA-Z0-9]+)/,
-  ];
-
-  for (const pattern of patterns) {
-    const match = input.match(pattern);
-    if (match) {
-      return match[1];
-    }
-  }
-
-  // If it's just an ID (22 chars alphanumeric)
-  if (/^[a-zA-Z0-9]{22}$/.test(input)) {
-    return input;
-  }
-
-  return null;
-}
 
 // Get track info using Spotify oEmbed API (no auth required)
 async function getTrackInfoFromOEmbed(trackId: string) {

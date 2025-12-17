@@ -2,48 +2,9 @@
  * 工具函数
  */
 
-/**
- * 从各种格式的 Spotify URL/URI 中提取 Track ID
- */
-export function extractTrackId(input: string): string | null {
-  if (!input) return null;
-  
-  const trimmed = input.trim();
-  
-  // spotify:track:xxx
-  const uriMatch = trimmed.match(/spotify:track:([a-zA-Z0-9]+)/);
-  if (uriMatch) return uriMatch[1];
-  
-  // open.spotify.com/track/xxx 或 open.spotify.com/intl-xx/track/xxx
-  const urlMatch = trimmed.match(/open\.spotify\.com\/(?:intl-[a-z]+\/)?track\/([a-zA-Z0-9]+)/);
-  if (urlMatch) return urlMatch[1];
-  
-  // 纯 ID (22 字符的 base62)
-  if (/^[a-zA-Z0-9]{22}$/.test(trimmed)) {
-    return trimmed;
-  }
-  
-  return null;
-}
-
-/**
- * 从 Spotify URL 中提取 Artist ID
- */
-export function extractArtistId(input: string): string | null {
-  if (!input) return null;
-  
-  const trimmed = input.trim();
-  
-  // spotify:artist:xxx
-  const uriMatch = trimmed.match(/spotify:artist:([a-zA-Z0-9]+)/);
-  if (uriMatch) return uriMatch[1];
-  
-  // open.spotify.com/artist/xxx
-  const urlMatch = trimmed.match(/open\.spotify\.com\/(?:intl-[a-z]+\/)?artist\/([a-zA-Z0-9]+)/);
-  if (urlMatch) return urlMatch[1];
-  
-  return null;
-}
+// Re-export from linkResolver for backward compatibility
+// @deprecated 请直接从 '@/lib/linkResolver' 导入
+export { extractTrackId, extractArtistId } from './linkResolver';
 
 /**
  * 生成 Track 页面的元数据
