@@ -17,10 +17,12 @@ export {
   getTrackInfo,
   getTrackInfoFromOEmbed,
   getCanvasUrl,
+  getCanvasApiResponse,
   searchTracks,
   type SpotifyTrack,
   type TrackInfo,
   type CanvasInfo,
+  type CanvasApiResponse,
   type SearchResult,
 } from './spotifyService';
 
