@@ -15,6 +15,8 @@ export interface AudioAnalysisState {
   audioContext: AudioContext | null;
   analyser: AnalyserNode | null;
   audioSource: MediaElementAudioSourceNode | null;
+  // 用户是否已经选择了本地音频文件（用于跨组件判断“音乐是否已上传”）
+  audioFileUrl: string | null;
 }
 
 export interface AudioAnalysisConfig {
@@ -35,6 +37,8 @@ export interface VisualizerParams {
   rgbShiftAmount: number;     // GLITCH LEVEL (0-1)
   vhsEnabled: boolean;
   scanlineIntensity: number;
+  bloomStrength: number;      // NEON GLOW (0-1)
+  zoomBlurStrength: number;   // IMPACT (0-1)
 }
 
 export interface ImageState {
@@ -53,16 +57,15 @@ export interface RecordingState {
 // Preset Types
 // =============================================================================
 
-export type PresetName = 
-  | "default" 
-  | "aggressive" 
-  | "chill" 
-  | "glitch" 
-  | "minimal" 
+export type PresetName =
+  | "default"
+  | "aggressive"
+  | "chill"
+  | "glitch"
+  | "minimal"
   | "earthquake";
 
 export interface PresetConfig {
-  name: PresetName;
   label: string;
   params: VisualizerParams;
 }
@@ -84,14 +87,17 @@ export interface ExportConfig {
 // Store Types
 // =============================================================================
 
-export interface VisualizerStoreState extends 
-  AudioAnalysisState, 
-  ImageState, 
-  VisualizerParams, 
+export interface VisualizerStoreState extends
+  AudioAnalysisState,
+  ImageState,
+  VisualizerParams,
   RecordingState {
   // Preset
   currentPreset: PresetName;
-  
+
+  // Flags
+  hasAudioFile: boolean;
+
   // Actions - Audio
   setBassEnergy: (value: number) => void;
   setFrequencyData: (data: Uint8Array | null) => void;
@@ -99,13 +105,17 @@ export interface VisualizerStoreState extends
   setAudioContext: (ctx: AudioContext | null) => void;
   setAnalyser: (analyser: AnalyserNode | null) => void;
   setAudioSource: (source: MediaElementAudioSourceNode | null) => void;
-  
+  setAudioFileUrl: (url: string | null) => void;
+
+   // Actions - Audio File
+  setHasAudioFile: (value: boolean) => void;
+
   // Actions - Image
   setImageUrl: (url: string | null) => void;
   setImageName: (name: string) => void;
   setDepthMapUrl: (url: string | null) => void;
   setIsGeneratingDepth: (value: boolean) => void;
-  
+
   // Actions - Parameters
   setDisplacementScale: (value: number) => void;
   setAudioReactStrength: (value: number) => void;
@@ -113,11 +123,13 @@ export interface VisualizerStoreState extends
   setRgbShiftAmount: (value: number) => void;
   setVhsEnabled: (value: boolean) => void;
   setScanlineIntensity: (value: number) => void;
-  
+  setBloomStrength: (value: number) => void;
+  setZoomBlurStrength: (value: number) => void;
+
   // Actions - Recording
   setIsRecording: (value: boolean) => void;
   setRecordingProgress: (value: number) => void;
-  
+
   // Actions - Preset
   applyPreset: (name: PresetName) => void;
   resetParameters: () => void;
