@@ -6,7 +6,7 @@
  */
 
 import { getJson, fetchWithTimeout } from '@/lib/httpClient';
-import { getAccessToken, getAnonymousToken, getClientCredentialsToken } from './spotifyAuth';
+import { getAccessToken, getAnonymousToken, getClientCredentialsToken } from '@/features/spotify-core';
 import logger from '@/lib/logger';
 
 const log = logger.withPrefix('SpotifyService');

@@ -2,14 +2,16 @@
 
 import { Suspense, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
-import ControlDeck from "@/components/visualizer/ControlDeck";
-import ViewportFrame from "@/components/visualizer/ViewportFrame";
-import AudioPlayer from "@/components/visualizer/AudioPlayer";
-import { DevToolPanel } from "@/features/visualizer/components";
+import {
+  ControlDeck,
+  ViewportFrame,
+  AudioPlayer,
+  DevToolPanel,
+} from "@/features/visualizer/components";
 
 // Dynamically import 3D canvas to avoid SSR issues
 const VisualizerCanvas = dynamic(
-  () => import("@/components/visualizer/VisualizerCanvas"),
+  () => import("@/features/visualizer/components/VisualizerCanvas"),
   { ssr: false }
 );
 

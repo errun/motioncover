@@ -2,7 +2,7 @@
 
 import { useRef, useState, useCallback } from "react";
 import { useVisualizerStore } from "../store";
-import { useAudioAnalyser } from "@/hooks/useAudioAnalyser";
+import { useAudioAnalyser } from "../hooks";
 
 function calcBand(freq: Uint8Array | null, startRatio: number, endRatio: number) {
   if (!freq || freq.length === 0) return 0;

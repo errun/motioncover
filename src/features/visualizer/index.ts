@@ -1,6 +1,6 @@
 /**
  * Visualizer 业务域导出
- * 
+ *
  * @module features/visualizer
  */
 
@@ -29,3 +29,8 @@ export type {
   DevToolState,
 } from './types';
 
+// Hooks
+export { useAudioAnalyser } from './hooks';
+
+// Components
+export * from './components';

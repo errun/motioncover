@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { extractTrackId } from "@/lib/linkResolver";
+import { extractTrackId } from "@/features/spotify-core";
 import { getCanvasApiResponse } from "@/services/spotifyService";
 import logger from "@/lib/logger";
 

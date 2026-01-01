@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { parseSpotifyInput } from "@/lib/linkResolver";
+import { parseSpotifyInput } from "@/features/spotify-core";
 
 export default function SearchBox() {
   const [query, setQuery] = useState("");

@@ -1,0 +1,43 @@
+
+> canvas-downloader@0.1.0 dev
+> next dev
+
+   ▲ Next.js 16.0.10 (Turbopack)
+   - Local:         http://localhost:3000
+   - Network:       http://10.147.19.155:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1227ms
+ ○ Compiling / ...
+ GET / 200 in 4.3s (compile: 3.9s, proxy.ts: 96ms, render: 318ms)
+ ○ Compiling /visualizer/architect ...
+ GET /visualizer/architect 200 in 4.1s (compile: 3.6s, proxy.ts: 13ms, render: 429ms)
+ GET /visualizer/architect 200 in 91ms (compile: 8ms, proxy.ts: 13ms, render: 69ms)
+ POST /api/architect 200 in 11.4s (compile: 286ms, proxy.ts: 6ms, render: 11.1s)
+ POST /api/layers 200 in 11.4s (compile: 116ms, proxy.ts: 7ms, render: 11.3s)
+ GET /visualizer/architect 200 in 176ms (compile: 16ms, proxy.ts: 9ms, render: 151ms)
+ POST /api/architect 200 in 9.0s (compile: 7ms, proxy.ts: 6ms, render: 9.0s)
+ POST /api/layers 200 in 9.6s (compile: 7ms, proxy.ts: 11ms, render: 9.6s)
+ ✓ Compiled in 264ms
+ ✓ Compiled in 234ms
+ ✓ Compiled in 229ms
+ GET /visualizer/architect 200 in 580ms (compile: 164ms, proxy.ts: 8ms, render: 408ms)
+ POST /api/architect 200 in 12.1s (compile: 7ms, proxy.ts: 4ms, render: 12.1s)
+ POST /api/layers 200 in 10.4s (compile: 7ms, proxy.ts: 10ms, render: 10.4s)
+ ✓ Compiled in 216ms
+ ✓ Compiled in 142ms
+ ✓ Compiled in 193ms
+ GET /visualizer/architect 200 in 510ms (compile: 168ms, proxy.ts: 9ms, render: 333ms)
+ POST /api/architect 200 in 9.9s (compile: 5ms, proxy.ts: 7ms, render: 9.9s)
+ POST /api/layers 200 in 10.1s (compile: 6ms, proxy.ts: 8ms, render: 10.1s)
+ ✓ Compiled in 264ms
+ ✓ Compiled in 223ms
+ ✓ Compiled in 231ms
+ GET /visualizer/architect 200 in 832ms (compile: 267ms, proxy.ts: 8ms, render: 557ms)
+ POST /api/architect 500 in 18.3s (compile: 4ms, proxy.ts: 7ms, render: 18.3s)
+ POST /api/architect 200 in 19.1s (compile: 6ms, proxy.ts: 6ms, render: 19.1s)
+ POST /api/layers 200 in 8.7s (compile: 5ms, proxy.ts: 6ms, render: 8.7s)
+ ✓ Compiled in 191ms
+ ✓ Compiled in 162ms
+[?25h

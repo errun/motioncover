@@ -1,10 +1,7 @@
 /**
  * 工具函数
+ * 通用工具函数，不包含业务逻辑
  */
-
-// Re-export from linkResolver for backward compatibility
-// @deprecated 请直接从 '@/lib/linkResolver' 导入
-export { extractTrackId, extractArtistId } from './linkResolver';
 
 /**
  * 生成 Track 页面的元数据
