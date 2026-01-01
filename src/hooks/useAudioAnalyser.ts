@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useRef, useEffect } from "react";
-import { useAudioStore, lerp } from "@/stores/audioStore";
+import { useVisualizerStore, lerp } from "@/features/visualizer";
 
 const FFT_SIZE = 256;
-const BASS_MIN_FREQ = 40;
-const BASS_MAX_FREQ = 100;
-const SMOOTHING_FACTOR = 0.1;
+const BASS_MIN_FREQ = 20;   // 扩展到更低频
+const BASS_MAX_FREQ = 250;  // 扩展到更高频，覆盖更多低音
+const SMOOTHING_FACTOR = 0.5; // 更高 = 更快响应（0.5 = 50% 新值 + 50% 旧值）
 
 export function useAudioAnalyser() {
   const {
@@ -18,7 +18,7 @@ export function useAudioAnalyser() {
     setBassEnergy,
     setFrequencyData,
     setIsPlaying,
-  } = useAudioStore();
+  } = useVisualizerStore();
 
   const animationFrameRef = useRef<number | null>(null);
   const previousBassRef = useRef<number>(0);
@@ -36,7 +36,8 @@ export function useAudioAnalyser() {
       // Create analyser
       const analyserNode = ctx.createAnalyser();
       analyserNode.fftSize = FFT_SIZE;
-      analyserNode.smoothingTimeConstant = 0.8;
+      // Lower smoothing = faster response (0 = instant, 1 = very slow)
+      analyserNode.smoothingTimeConstant = 0.3;
       setAnalyser(analyserNode);
 
       // Connect audio element
@@ -100,15 +101,20 @@ export function useAudioAnalyser() {
   );
 
   // Animation loop for continuous analysis
-  const startAnalysis = useCallback(() => {
-    if (!analyser) return;
+  // 接受可选的 analyserNode 参数，解决 React 状态更新时序问题
+  const startAnalysis = useCallback((analyserNode?: AnalyserNode) => {
+    const node = analyserNode || analyser;
+    if (!node) {
+      console.warn('[useAudioAnalyser] No analyser available for startAnalysis');
+      return;
+    }
 
     const analyze = () => {
-      const bass = calculateBassEnergy(analyser);
+      const bass = calculateBassEnergy(node);
       setBassEnergy(bass);
 
       // Get full frequency data for waveform
-      const freqData = getFrequencyData(analyser);
+      const freqData = getFrequencyData(node);
       setFrequencyData(new Uint8Array(freqData));
 
       animationFrameRef.current = requestAnimationFrame(analyze);
