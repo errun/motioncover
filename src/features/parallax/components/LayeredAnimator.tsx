@@ -229,9 +229,6 @@ export function LayeredAnimator({
             uniforms={bgUniforms}
             transparent
             depthWrite={false}
-            onError={(e) => {
-              console.error("[LayeredAnimator] background shader error", e);
-            }}
           />
         </mesh>
       )}
@@ -253,9 +250,6 @@ export function LayeredAnimator({
               uniforms={fgUniforms}
               transparent
               depthWrite={false}
-              onError={(e) => {
-                console.error("[LayeredAnimator] foreground shader error", e);
-              }}
             />
           </mesh>
         )
