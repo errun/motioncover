@@ -1,6 +1,6 @@
-"""
+/*
 Audio feature types.
-"""
+*/
 
 export interface AudioAnalysisState {
   bassEnergy: number;
