@@ -5,7 +5,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import { useParallaxStore } from "../store";
-import { useVisualizerStore } from "@/features/visualizer";
+import { useAudioStore } from "@/features/audio";
 
 // 双层 WebGL Animator：前景 + 背景两个平面，基于音频驱动的 Shader 光影
 
@@ -108,7 +108,7 @@ export function LayeredAnimator({
   const fgMatRef = useRef<THREE.ShaderMaterial | null>(null);
   const { camera, viewport, gl } = useThree();
   const { audioReactive, audioIntensity } = useParallaxStore();
-  const { bassEnergy, frequencyData, isPlaying } = useVisualizerStore();
+  const { bassEnergy, frequencyData, isPlaying } = useAudioStore();
 
   useEffect(() => {
     const debug = gl.debug;

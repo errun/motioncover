@@ -4,6 +4,7 @@ import { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useTexture } from "@react-three/drei";
 import * as THREE from "three";
+import { useAudioStore } from "@/features/audio";
 import { useVisualizerStore, lerp } from "../../store";
 import { PLACEHOLDER_COVER, THREE_CONFIG } from "@/constants";
 
@@ -48,7 +49,8 @@ interface ImagePlaneProps {
 export function ImagePlane({ customImageUrl, depthMapUrl }: ImagePlaneProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const materialRef = useRef<THREE.ShaderMaterial>(null);
-  const { bassEnergy, displacementScale, audioReactStrength, isPlaying } = useVisualizerStore();
+  const { bassEnergy, isPlaying } = useAudioStore();
+  const { displacementScale, audioReactStrength } = useVisualizerStore();
 
   const imageSrc = customImageUrl || PLACEHOLDER_COVER;
   const colorTexture = useTexture(imageSrc);
@@ -123,4 +125,3 @@ export function ImagePlane({ customImageUrl, depthMapUrl }: ImagePlaneProps) {
     </mesh>
   );
 }
-

@@ -1,5 +1,6 @@
 "use client";
 
+import { useAudioStore } from "@/features/audio";
 import { useVisualizerStore } from "../store";
 import PhonkFader from "./PhonkFader";
 import ImageUploader from "./ImageUploader";
@@ -18,7 +19,6 @@ export default function ControlDeck({ canvasRef }: ControlDeckProps) {
     cameraShakeAmp,
     rgbShiftAmount,
     vhsEnabled,
-    isPlaying,
     bloomStrength,
     zoomBlurStrength,
     setDisplacementScale,
@@ -30,6 +30,7 @@ export default function ControlDeck({ canvasRef }: ControlDeckProps) {
     setZoomBlurStrength,
     resetParameters,
   } = useVisualizerStore();
+  const { isPlaying } = useAudioStore();
 
   return (
     <div
@@ -171,4 +172,3 @@ export default function ControlDeck({ canvasRef }: ControlDeckProps) {
     </div>
   );
 }
-

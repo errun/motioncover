@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
+import { useAudioStore } from "@/features/audio";
 import { useVisualizerStore, lerp } from "../../store";
 
 /**
@@ -10,7 +11,8 @@ import { useVisualizerStore, lerp } from "../../store";
  */
 export function CameraShake() {
   const { camera } = useThree();
-  const { bassEnergy, cameraShakeAmp, isPlaying, audioReactStrength } = useVisualizerStore();
+  const { bassEnergy, isPlaying } = useAudioStore();
+  const { cameraShakeAmp, audioReactStrength } = useVisualizerStore();
   const targetPos = useRef({ x: 0, y: 0, z: 5 });
   const smoothBass = useRef(0);
 
@@ -51,4 +53,3 @@ export function CameraShake() {
 
   return null;
 }
-

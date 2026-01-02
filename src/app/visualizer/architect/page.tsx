@@ -5,7 +5,7 @@ import { Canvas } from "@react-three/fiber";
 import Link from "next/link";
 import { LayeredAnimator, useParallaxStore } from "@/features/parallax";
 import { AudioPlayer } from "@/features/visualizer/components";
-import { useVisualizerStore } from "@/features/visualizer";
+import { useAudioStore } from "@/features/audio";
 
 type ArchitectResult = {
   imageUrl: string;
@@ -41,7 +41,7 @@ export default function ArchitectPage() {
   const [debugSolidBackground, setDebugSolidBackground] = useState(false);
   const [showForeground, setShowForeground] = useState(true);
   const [debugPlainMaterials, setDebugPlainMaterials] = useState(false);
-  const { audioFileUrl } = useVisualizerStore();
+  const { audioFileUrl } = useAudioStore();
   const {
     audioReactive,
     audioIntensity,

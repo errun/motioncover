@@ -10,7 +10,7 @@ import {
 	  LayeredAnimator,
 	} from "@/features/parallax";
 import { AudioPlayer } from "@/features/visualizer/components";
-import { useVisualizerStore } from "@/features/visualizer";
+import { useAudioStore } from "@/features/audio";
 
 function Cover25DScene() {
 	  const {
@@ -20,7 +20,7 @@ function Cover25DScene() {
 	    backgroundLayer,
 	    layersReady,
 	  } = useParallaxStore();
-	  const { audioFileUrl } = useVisualizerStore();
+	  const { audioFileUrl } = useAudioStore();
 
 	  const canUseAnimator =
 	    !!audioFileUrl &&
@@ -110,7 +110,7 @@ function calculateSnareEnergy(freqData: Uint8Array | null): number {
 
 // 实时音频能量显示组件 - Anyma 幻觉版
 function BassEnergyMeter() {
-  const { bassEnergy, isPlaying, frequencyData } = useVisualizerStore();
+  const { bassEnergy, isPlaying, frequencyData } = useAudioStore();
   const { audioReactive, audioIntensity } = useParallaxStore();
 
   const scaledBass = audioReactive && isPlaying ? bassEnergy * audioIntensity : 0;
@@ -249,7 +249,7 @@ export default function Cover25DPage() {
     layersReady,
   } = useParallaxStore();
   // 来自 Visualizer 的全局音频状态：用于判断“音乐是否已上传”
-  const { audioFileUrl } = useVisualizerStore();
+  const { audioFileUrl } = useAudioStore();
 
   const [layerError, setLayerError] = useState<string | null>(null);
   const [layerDebug, setLayerDebug] = useState<string[]>([]);

@@ -16,6 +16,7 @@ import {
   PostEffects,
 } from "@/features/visualizer/components";
 import { AudioVisualizer } from "@/features/visualizer/components/AudioVisualizer";
+import { useAudioStore } from "@/features/audio";
 import { useVisualizerStore } from "@/features/visualizer";
 
 // 效果配置
@@ -39,7 +40,7 @@ const EFFECTS: EffectConfig[] = [
 // 自动模拟 Bass 的 Hook
 function useAutoSimulateBass() {
   const frameRef = useRef(0);
-  const { setBassEnergy, setIsPlaying } = useVisualizerStore();
+  const { setBassEnergy, setIsPlaying } = useAudioStore();
 
   useEffect(() => {
     setIsPlaying(true);
@@ -111,7 +112,7 @@ function EffectCard({ effect }: { effect: EffectConfig }) {
 // Bass 模拟器组件
 function BassSimulator() {
   useAutoSimulateBass();
-  const { bassEnergy } = useVisualizerStore();
+  const { bassEnergy } = useAudioStore();
 
   return (
     <div className="fixed bottom-4 right-4 bg-zinc-900/90 backdrop-blur border border-zinc-700 rounded-lg px-4 py-2 flex items-center gap-3">
@@ -193,4 +194,3 @@ export default function EffectsPreviewPage() {
 	    </div>
 	  );
 }
-

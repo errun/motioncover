@@ -1,5 +1,5 @@
 /**
- * Central type definitions for the MotionCover application
+ * Central type definitions for the MotionCover application.
  * @module types
  */
 
@@ -7,10 +7,16 @@
 // Re-export from Feature Modules (Single Source of Truth)
 // =============================================================================
 
-// Visualizer Types - 从 feature 模块导出
+// Audio Types
 export type {
   AudioAnalysisState,
   AudioAnalysisConfig,
+  AudioStoreState,
+  AudioActions,
+} from "@/features/audio/types";
+
+// Visualizer Types
+export type {
   VisualizerParams,
   ImageState,
   RecordingState,
@@ -22,7 +28,7 @@ export type {
   DevToolState,
 } from "@/features/visualizer/types";
 
-// Parallax Types - 从 feature 模块导出
+// Parallax Types
 export type {
   ParallaxState,
   ParallaxActions,
@@ -34,7 +40,6 @@ export type {
 // Re-export from Services (Single Source of Truth)
 // =============================================================================
 
-// Spotify 业务类型 - 从 services 导出
 export type {
   SpotifyTrack,
   TrackInfo,
@@ -43,10 +48,8 @@ export type {
   SearchResult,
 } from "@/services/spotifyService";
 
-// API 响应类型 - 从 lib 导出
 export type {
   ApiResponse,
   ApiSuccessResponse,
   ApiErrorResponse,
 } from "@/lib/apiResponse";
-

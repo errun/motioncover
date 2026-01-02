@@ -1,6 +1,6 @@
 "use client";
 
-import { useVisualizerStore } from "../store";
+import { useAudioStore } from "@/features/audio";
 
 interface PhonkFaderProps {
   label: string;
@@ -23,7 +23,7 @@ export default function PhonkFader({
   glowOnBeat = false,
   overdrive = false,
 }: PhonkFaderProps) {
-  const { bassEnergy, isPlaying } = useVisualizerStore();
+  const { bassEnergy, isPlaying } = useAudioStore();
 
   // Check if overdrive mode (value > 80%)
   const isOverdrive = overdrive && value > 0.8;
@@ -133,4 +133,3 @@ export default function PhonkFader({
     </div>
   );
 }
-

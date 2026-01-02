@@ -3,6 +3,7 @@
 import { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import { useAudioStore } from "@/features/audio";
 import { useVisualizerStore, lerp } from "../../store";
 import { THREE_CONFIG } from "@/constants";
 
@@ -11,7 +12,8 @@ import { THREE_CONFIG } from "@/constants";
  */
 export function FireParticles() {
   const pointsRef = useRef<THREE.Points>(null);
-  const { bassEnergy, isPlaying, audioReactStrength } = useVisualizerStore();
+  const { bassEnergy, isPlaying } = useAudioStore();
+  const { audioReactStrength } = useVisualizerStore();
   const smoothBass = useRef(0);
 
   const particleCount = THREE_CONFIG.particleCount.fire;
@@ -78,4 +80,3 @@ export function FireParticles() {
     </points>
   );
 }
-

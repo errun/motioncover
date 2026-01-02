@@ -5,6 +5,7 @@ import { useFrame } from "@react-three/fiber";
 import { EffectComposer, ChromaticAberration, Noise, Scanline, Bloom, Vignette } from "@react-three/postprocessing";
 import { BlendFunction } from "postprocessing";
 import * as THREE from "three";
+import { useAudioStore } from "@/features/audio";
 import { useVisualizerStore, lerp } from "../../store";
 
 /**
@@ -12,11 +13,10 @@ import { useVisualizerStore, lerp } from "../../store";
  * Provides VHS-style effects: chromatic aberration, noise, and scanlines
  */
 export function PostEffects() {
+  const { bassEnergy, isPlaying } = useAudioStore();
   const {
-    bassEnergy,
     rgbShiftAmount,
     vhsEnabled,
-    isPlaying,
     bloomStrength,
     zoomBlurStrength
   } = useVisualizerStore();

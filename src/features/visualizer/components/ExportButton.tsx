@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
+import { useAudioStore } from "@/features/audio";
 import { useVisualizerStore } from "../store";
 
 interface ExportButtonProps {
@@ -22,7 +23,8 @@ export default function ExportButton({ canvasRef }: ExportButtonProps) {
   const [showWatermark, setShowWatermark] = useState(true);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
-  const { isPlaying, setIsRecording } = useVisualizerStore();
+  const { isPlaying } = useAudioStore();
+  const { setIsRecording } = useVisualizerStore();
 
   const startExport = useCallback(async () => {
     if (!canvasRef.current) {
@@ -216,4 +218,3 @@ export default function ExportButton({ canvasRef }: ExportButtonProps) {
     </div>
   );
 }
-

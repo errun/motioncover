@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useAudioStore } from "@/features/audio";
 import { useVisualizerStore } from "../store";
 
 interface ViewportFrameProps {
@@ -36,7 +37,8 @@ function VcrTimestamp() {
 }
 
 export default function ViewportFrame({ children }: ViewportFrameProps) {
-  const { bassEnergy, isPlaying, isRecording } = useVisualizerStore();
+  const { bassEnergy, isPlaying } = useAudioStore();
+  const { isRecording } = useVisualizerStore();
 
   // Calculate frame glow based on bass
   const glowIntensity = Math.min(bassEnergy * 30, 20);
@@ -133,4 +135,3 @@ export default function ViewportFrame({ children }: ViewportFrameProps) {
     </div>
   );
 }
-

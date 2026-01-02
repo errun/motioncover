@@ -1,5 +1,5 @@
 /**
- * Visualizer 业务域导出
+ * Visualizer domain exports.
  *
  * @module features/visualizer
  */
@@ -7,17 +7,14 @@
 // Store
 export {
   useVisualizerStore,
-  useAudioStore, // backward compatibility
   PRESETS,
   defaultParams,
   lerp,
   clamp,
-} from './store';
+} from "./store";
 
 // Types
 export type {
-  AudioAnalysisState,
-  AudioAnalysisConfig,
   VisualizerParams,
   ImageState,
   RecordingState,
@@ -27,10 +24,4 @@ export type {
   ExportConfig,
   VisualizerStoreState,
   DevToolState,
-} from './types';
-
-// Hooks
-export { useAudioAnalyser } from './hooks';
-
-// Components
-export * from './components';
+} from "./types";

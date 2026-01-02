@@ -10,7 +10,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import { useParallaxStore } from "../store";
-import { useVisualizerStore } from "@/features/visualizer";
+import { useAudioStore } from "@/features/audio";
 
 // ============================================
 // 视差着色器 v5 - Anyma 幻觉版：
@@ -231,7 +231,7 @@ export function ParallaxMesh({ imageUrl, depthMapUrl }: ParallaxMeshProps) {
     audioIntensity,
   } = useParallaxStore();
   
-  const { bassEnergy, isPlaying, frequencyData } = useVisualizerStore();
+  const { bassEnergy, isPlaying, frequencyData } = useAudioStore();
 
   // 加载纹理
   const [texture, depthMap] = useTexture([imageUrl, depthMapUrl]);
@@ -456,4 +456,3 @@ export function ParallaxMesh({ imageUrl, depthMapUrl }: ParallaxMeshProps) {
     </mesh>
   );
 }
-

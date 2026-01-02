@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect, useRef } from "react";
+import { useAudioStore } from "@/features/audio";
 import { useVisualizerStore, PRESETS } from "../store";
 
 // 仅在开发环境渲染
@@ -20,9 +21,8 @@ export default function DevToolPanel() {
   const lastTime = useRef(performance.now());
   
   // 从 store 获取状态
+  const { bassEnergy, isPlaying } = useAudioStore();
   const {
-    bassEnergy,
-    isPlaying,
     imageUrl,
     depthMapUrl,
     isGeneratingDepth,
@@ -176,4 +176,3 @@ function ParamRow({ label, value }: { label: string; value: number }) {
     </div>
   );
 }
-

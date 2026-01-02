@@ -1,15 +1,12 @@
 /**
- * Visualizer 状态管理
- * 使用 Zustand 进行状态管理
- * 
+ * Visualizer state store.
+ *
  * @module features/visualizer/store
  */
 
 import { create } from "zustand";
 import type { PresetName, VisualizerParams, VisualizerStoreState } from "./types";
 
-// 默认参数
-// 默认参数
 export const defaultParams: VisualizerParams = {
   displacementScale: 0.5,
   audioReactStrength: 0.7,
@@ -21,7 +18,6 @@ export const defaultParams: VisualizerParams = {
   zoomBlurStrength: 0.0,
 };
 
-// 预设配置
 export const PRESETS: Record<PresetName, { label: string; params: VisualizerParams }> = {
   default: {
     label: "DEFAULT",
@@ -95,49 +91,23 @@ export const PRESETS: Record<PresetName, { label: string; params: VisualizerPara
 };
 
 export const useVisualizerStore = create<VisualizerStoreState>((set) => ({
-  // Initial Audio State
-  bassEnergy: 0,
-  frequencyData: null,
-  isPlaying: false,
-  audioContext: null,
-  analyser: null,
-  audioSource: null,
-  audioFileUrl: null,
-  hasAudioFile: false,
-
-  // Initial Image State
   imageUrl: null,
   imageName: "Default Cover",
   depthMapUrl: null,
   isGeneratingDepth: false,
 
-  // Initial Recording State
   isRecording: false,
   recordingProgress: 0,
 
-  // Initial Preset
   currentPreset: "default" as PresetName,
 
-  // Initial Parameters
   ...defaultParams,
 
-  // Actions - Audio
-  setBassEnergy: (value) => set({ bassEnergy: value }),
-  setFrequencyData: (data) => set({ frequencyData: data }),
-  setIsPlaying: (value) => set({ isPlaying: value }),
-  setAudioContext: (ctx) => set({ audioContext: ctx }),
-  setAnalyser: (analyser) => set({ analyser }),
-  setAudioSource: (source) => set({ audioSource: source }),
-  setAudioFileUrl: (url) => set({ audioFileUrl: url }),
-  setHasAudioFile: (value) => set({ hasAudioFile: value }),
-
-  // Actions - Image
   setImageUrl: (url) => set({ imageUrl: url, depthMapUrl: null }),
   setImageName: (name) => set({ imageName: name }),
   setDepthMapUrl: (url) => set({ depthMapUrl: url }),
   setIsGeneratingDepth: (value) => set({ isGeneratingDepth: value }),
 
-  // Actions - Parameters
   setDisplacementScale: (value) => set({ displacementScale: value, currentPreset: "default" }),
   setAudioReactStrength: (value) => set({ audioReactStrength: value, currentPreset: "default" }),
   setCameraShakeAmp: (value) => set({ cameraShakeAmp: value, currentPreset: "default" }),
@@ -147,16 +117,13 @@ export const useVisualizerStore = create<VisualizerStoreState>((set) => ({
   setBloomStrength: (value) => set({ bloomStrength: value, currentPreset: "default" }),
   setZoomBlurStrength: (value) => set({ zoomBlurStrength: value, currentPreset: "default" }),
 
-  // Actions - Recording
   setIsRecording: (value) => set({ isRecording: value }),
   setRecordingProgress: (value) => set({ recordingProgress: value }),
 
-  // Actions - Preset
   applyPreset: (name) => set({ ...PRESETS[name].params, currentPreset: name }),
   resetParameters: () => set({ ...defaultParams, currentPreset: "default" }),
 }));
 
-// Helper functions
 export function lerp(start: number, end: number, factor: number): number {
   return start + (end - start) * factor;
 }
@@ -164,8 +131,3 @@ export function lerp(start: number, end: number, factor: number): number {
 export function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
-
-// Re-export for backward compatibility
-// @deprecated 请使用 useVisualizerStore
-export const useAudioStore = useVisualizerStore;
-

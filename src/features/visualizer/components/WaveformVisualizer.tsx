@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect } from "react";
-import { useVisualizerStore } from "../store";
+import { useAudioStore } from "@/features/audio";
 
 interface WaveformVisualizerProps {
   width?: number;
@@ -19,7 +19,7 @@ export default function WaveformVisualizer({
   glowColor = "#39FF14",
 }: WaveformVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { frequencyData, isPlaying, bassEnergy } = useVisualizerStore();
+  const { frequencyData, isPlaying, bassEnergy } = useAudioStore();
   const animationRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -118,4 +118,3 @@ export default function WaveformVisualizer({
     </div>
   );
 }
-

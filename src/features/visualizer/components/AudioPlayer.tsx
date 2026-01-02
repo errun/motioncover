@@ -1,8 +1,8 @@
 "use client";
 
 import { useRef, useState, useCallback } from "react";
-import { useVisualizerStore } from "../store";
-import { useAudioAnalyser } from "../hooks";
+import { useAudioStore } from "@/features/audio";
+import { useAudioAnalyser } from "@/features/audio";
 
 function calcBand(freq: Uint8Array | null, startRatio: number, endRatio: number) {
   if (!freq || freq.length === 0) return 0;
@@ -21,7 +21,7 @@ export default function AudioPlayer() {
   const [isInitialized, setIsInitialized] = useState(false);
 
   const { isPlaying, bassEnergy, frequencyData, setAudioFileUrl } =
-    useVisualizerStore();
+    useAudioStore();
   const { initAudio, startAnalysis, stopAnalysis } = useAudioAnalyser();
   const midEnergy = isPlaying ? calcBand(frequencyData, 0.25, 0.5) : 0;
   const highEnergy = isPlaying ? calcBand(frequencyData, 0.5, 1.0) : 0;
