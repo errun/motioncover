@@ -11,15 +11,17 @@ import { useVisualizerStore, lerp } from "../../store";
  */
 export function CameraShake() {
   const { camera } = useThree();
-  const { bassEnergy, isPlaying } = useAudioStore();
-  const { cameraShakeAmp, audioReactStrength } = useVisualizerStore();
+  const { bassEnergy: rawBass, isPlaying } = useAudioStore();
+  const { cameraShakeAmp, audioReactStrength, bassEnabled } = useVisualizerStore();
   const targetPos = useRef({ x: 0, y: 0, z: 5 });
   const smoothBass = useRef(0);
+  const bassEnergy = bassEnabled ? rawBass : 0;
 
   useFrame((state) => {
     // Smooth the bass for camera motion
     smoothBass.current = lerp(smoothBass.current, bassEnergy, 0.2);
     const bass = smoothBass.current;
+    const gatedBass = Math.max(0, bass - 0.7);
 
     if (!isPlaying) {
       camera.position.z = lerp(camera.position.z, 5, 0.1);
@@ -29,15 +31,15 @@ export function CameraShake() {
     }
 
     // Z-axis pump on bass (zoom in effect)
-    const zPump = bass * cameraShakeAmp * audioReactStrength * 1.5;
+    const zPump = gatedBass * cameraShakeAmp * audioReactStrength * 1.5;
     targetPos.current.z = 5 - zPump;
 
     // Add smooth breathing motion
     const breathe = Math.sin(state.clock.elapsedTime * 0.5) * 0.1;
 
     // X/Y shake on high bass
-    if (bass > 0.5) {
-      const shakeIntensity = (bass - 0.5) * cameraShakeAmp * 0.4;
+    if (gatedBass > 0.02) {
+      const shakeIntensity = gatedBass * cameraShakeAmp * 0.8;
       targetPos.current.x = (Math.random() - 0.5) * shakeIntensity;
       targetPos.current.y = (Math.random() - 0.5) * shakeIntensity;
     } else {

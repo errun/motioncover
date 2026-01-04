@@ -8,12 +8,15 @@ import { useVisualizerStore, lerp } from "../../store";
 import { THREE_CONFIG } from "@/constants";
 
 /**
- * Smoke particle effect - slow rising particles with subtle bass response
+ * Smoke particle effect - slow rising particles with subtle high response
  */
 export function SmokeParticles() {
   const pointsRef = useRef<THREE.Points>(null);
-  const { bassEnergy, isPlaying } = useAudioStore();
-  const smoothBass = useRef(0);
+  const { highEnergy: rawHigh, isPlaying } = useAudioStore();
+  const { highEnabled } = useVisualizerStore();
+  const smoothHigh = useRef(0);
+  // Smoke responds to high frequencies
+  const highEnergy = highEnabled ? rawHigh : 0;
 
   const particleCount = THREE_CONFIG.particleCount.smoke;
   
@@ -38,14 +41,14 @@ export function SmokeParticles() {
   useFrame(() => {
     if (!pointsRef.current || !isPlaying) return;
 
-    smoothBass.current = lerp(smoothBass.current, bassEnergy, 0.1);
-    const bass = smoothBass.current;
+    smoothHigh.current = lerp(smoothHigh.current, highEnergy, 0.1);
+    const high = smoothHigh.current;
 
     const posArray = pointsRef.current.geometry.attributes.position.array as Float32Array;
 
     for (let i = 0; i < particleCount; i++) {
       const i3 = i * 3;
-      posArray[i3 + 1] += velocities[i] * (1 + bass * 0.5);
+      posArray[i3 + 1] += velocities[i] * (1 + high * 0.5);
       posArray[i3] += (Math.random() - 0.5) * 0.01;
 
       // Reset particle when it goes above viewport

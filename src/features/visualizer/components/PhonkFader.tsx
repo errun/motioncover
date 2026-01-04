@@ -23,7 +23,8 @@ export default function PhonkFader({
   glowOnBeat = false,
   overdrive = false,
 }: PhonkFaderProps) {
-  const { bassEnergy, isPlaying } = useAudioStore();
+  const { bassEnergy: rawBass, isPlaying } = useAudioStore();
+  const bassEnergy = rawBass; // PhonkFader UI glow always responds to actual bass
 
   // Check if overdrive mode (value > 80%)
   const isOverdrive = overdrive && value > 0.8;

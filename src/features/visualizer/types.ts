@@ -17,6 +17,10 @@ export interface VisualizerParams {
   scanlineIntensity: number;
   bloomStrength: number;      // NEON GLOW (0-1)
   zoomBlurStrength: number;   // IMPACT (0-1)
+  // Energy band toggles
+  bassEnabled: boolean;       // BASS ENERGY 开关
+  midEnabled: boolean;        // MID ENERGY 开关
+  highEnabled: boolean;       // HIGH ENERGY 开关
 }
 
 export interface ImageState {
@@ -87,6 +91,9 @@ export interface VisualizerStoreState extends
   setScanlineIntensity: (value: number) => void;
   setBloomStrength: (value: number) => void;
   setZoomBlurStrength: (value: number) => void;
+  setBassEnabled: (value: boolean) => void;
+  setMidEnabled: (value: boolean) => void;
+  setHighEnabled: (value: boolean) => void;
 
   // Actions - Recording
   setIsRecording: (value: boolean) => void;

@@ -1,18 +1,8 @@
 "use client";
 
 import { useRef, useState, useCallback } from "react";
-import { useAudioStore } from "@/features/audio";
-import { useAudioAnalyser } from "@/features/audio";
-
-function calcBand(freq: Uint8Array | null, startRatio: number, endRatio: number) {
-  if (!freq || freq.length === 0) return 0;
-  const start = Math.floor(freq.length * startRatio);
-  const end = Math.floor(freq.length * endRatio);
-  if (end <= start) return 0;
-  let sum = 0;
-  for (let i = start; i < end; i++) sum += freq[i];
-  return sum / ((end - start) * 255);
-}
+import { useAudioStore, useAudioAnalyser } from "@/features/audio";
+import { useVisualizerStore } from "../store";
 
 export default function AudioPlayer() {
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -20,11 +10,15 @@ export default function AudioPlayer() {
   const [fileName, setFileName] = useState<string>("Upload audio file");
   const [isInitialized, setIsInitialized] = useState(false);
 
-  const { isPlaying, bassEnergy, frequencyData, setAudioFileUrl } =
+  const { isPlaying, bassEnergy, midEnergy, highEnergy, setAudioFileUrl } =
     useAudioStore();
   const { initAudio, startAnalysis, stopAnalysis } = useAudioAnalyser();
-  const midEnergy = isPlaying ? calcBand(frequencyData, 0.25, 0.5) : 0;
-  const highEnergy = isPlaying ? calcBand(frequencyData, 0.5, 1.0) : 0;
+  const {
+    bassEnabled, midEnabled, highEnabled,
+    setBassEnabled, setMidEnabled, setHighEnabled
+  } = useVisualizerStore();
+  const displayMidEnergy = isPlaying ? midEnergy : 0;
+  const displayHighEnergy = isPlaying ? highEnergy : 0;
 
   // Handle file upload
   const handleFileChange = useCallback(
@@ -124,8 +118,18 @@ export default function AudioPlayer() {
       {/* Bass Energy Display */}
       <div className="mt-3">
         <div className="flex items-center justify-between mb-1">
-          <span className="phonk-mono text-xs text-gray-500">BASS ENERGY</span>
-          <span className="phonk-mono text-xs" style={{ color: "#39FF14" }}>
+          <button
+            onClick={() => setBassEnabled(!bassEnabled)}
+            className="phonk-mono text-xs flex items-center gap-1.5 hover:opacity-80"
+            style={{ color: bassEnabled ? "#39FF14" : "#666" }}
+          >
+            <span className="w-3 h-3 border flex items-center justify-center text-[8px]"
+              style={{ borderColor: bassEnabled ? "#39FF14" : "#666" }}>
+              {bassEnabled ? "✓" : ""}
+            </span>
+            BASS ENERGY
+          </button>
+          <span className="phonk-mono text-xs" style={{ color: bassEnabled ? "#39FF14" : "#666" }}>
             {(bassEnergy * 100).toFixed(0)}%
           </span>
         </div>
@@ -134,6 +138,7 @@ export default function AudioPlayer() {
           style={{
             background: "#111",
             border: "1px solid #333",
+            opacity: bassEnabled ? 1 : 0.3,
           }}
         >
           <div
@@ -155,11 +160,22 @@ export default function AudioPlayer() {
         </div>
       </div>
 
+      {/* Mid Energy Display */}
       <div className="mt-3">
         <div className="flex items-center justify-between mb-1">
-          <span className="phonk-mono text-xs text-gray-500">MID ENERGY</span>
-          <span className="phonk-mono text-xs" style={{ color: "#00B3FF" }}>
-            {(midEnergy * 100).toFixed(0)}%
+          <button
+            onClick={() => setMidEnabled(!midEnabled)}
+            className="phonk-mono text-xs flex items-center gap-1.5 hover:opacity-80"
+            style={{ color: midEnabled ? "#00B3FF" : "#666" }}
+          >
+            <span className="w-3 h-3 border flex items-center justify-center text-[8px]"
+              style={{ borderColor: midEnabled ? "#00B3FF" : "#666" }}>
+              {midEnabled ? "✓" : ""}
+            </span>
+            MID ENERGY
+          </button>
+          <span className="phonk-mono text-xs" style={{ color: midEnabled ? "#00B3FF" : "#666" }}>
+            {(displayMidEnergy * 100).toFixed(0)}%
           </span>
         </div>
         <div
@@ -167,24 +183,36 @@ export default function AudioPlayer() {
           style={{
             background: "#111",
             border: "1px solid #333",
+            opacity: midEnabled ? 1 : 0.3,
           }}
         >
           <div
             className="h-full transition-all duration-75"
             style={{
-              width: `${midEnergy * 100}%`,
+              width: `${displayMidEnergy * 100}%`,
               background: "#00B3FF",
-              boxShadow: midEnergy > 0.5 ? "0 0 10px #00B3FF" : "none",
+              boxShadow: displayMidEnergy > 0.5 ? "0 0 10px #00B3FF" : "none",
             }}
           />
         </div>
       </div>
 
+      {/* High Energy Display */}
       <div className="mt-3">
         <div className="flex items-center justify-between mb-1">
-          <span className="phonk-mono text-xs text-gray-500">HIGH ENERGY</span>
-          <span className="phonk-mono text-xs" style={{ color: "#FFB020" }}>
-            {(highEnergy * 100).toFixed(0)}%
+          <button
+            onClick={() => setHighEnabled(!highEnabled)}
+            className="phonk-mono text-xs flex items-center gap-1.5 hover:opacity-80"
+            style={{ color: highEnabled ? "#FFB020" : "#666" }}
+          >
+            <span className="w-3 h-3 border flex items-center justify-center text-[8px]"
+              style={{ borderColor: highEnabled ? "#FFB020" : "#666" }}>
+              {highEnabled ? "✓" : ""}
+            </span>
+            HIGH ENERGY
+          </button>
+          <span className="phonk-mono text-xs" style={{ color: highEnabled ? "#FFB020" : "#666" }}>
+            {(displayHighEnergy * 100).toFixed(0)}%
           </span>
         </div>
         <div
@@ -192,14 +220,15 @@ export default function AudioPlayer() {
           style={{
             background: "#111",
             border: "1px solid #333",
+            opacity: highEnabled ? 1 : 0.3,
           }}
         >
           <div
             className="h-full transition-all duration-75"
             style={{
-              width: `${highEnergy * 100}%`,
+              width: `${displayHighEnergy * 100}%`,
               background: "#FFB020",
-              boxShadow: highEnergy > 0.5 ? "0 0 10px #FFB020" : "none",
+              boxShadow: displayHighEnergy > 0.5 ? "0 0 10px #FFB020" : "none",
             }}
           />
         </div>

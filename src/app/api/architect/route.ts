@@ -27,13 +27,19 @@ function getExtensionFromDataUrl(dataUrl: string) {
   return "bin";
 }
 
-async function saveDataUrlFile(dataUrl: string, prefix: string, stamp: string) {
+async function saveDataUrlFile(
+  dataUrl: string,
+  prefix: string,
+  stamp: string,
+  sequence?: number
+) {
   const match = dataUrl.match(/^data:(.+?);base64,(.+)$/);
   if (!match) {
     throw new Error("Invalid data URL");
   }
   const ext = getExtensionFromDataUrl(dataUrl);
-  const fileName = `${prefix}-${stamp}.${ext}`;
+  const seqPart = sequence ? `-${String(sequence).padStart(4, "0")}` : "";
+  const fileName = `${prefix}${seqPart}-${stamp}.${ext}`;
   const filePath = path.join(IMAGES_DIR, fileName);
   await fs.mkdir(IMAGES_DIR, { recursive: true });
   await fs.writeFile(filePath, Buffer.from(match[2], "base64"));
@@ -56,6 +62,45 @@ async function updateLatestManifest(partial: Record<string, unknown>) {
   await fs.mkdir(IMAGES_DIR, { recursive: true });
   await fs.writeFile(filePath, JSON.stringify(next, null, 2));
   return next;
+}
+
+const HISTORY_FILE = path.join(IMAGES_DIR, "history.json");
+
+type ArchitectRun = {
+  index: number;
+  fileName: string;
+  publicUrl: string;
+  prompt: string;
+  createdAt: string;
+};
+
+type HistoryFile = {
+  counters: { architect: number; layers: number };
+  architectRuns: ArchitectRun[];
+  layerRuns: Array<Record<string, unknown>>;
+};
+
+async function readHistory(): Promise<HistoryFile> {
+  try {
+    const raw = await fs.readFile(HISTORY_FILE, "utf8");
+    const parsed = JSON.parse(raw) as HistoryFile;
+    return {
+      counters: parsed.counters || { architect: 0, layers: 0 },
+      architectRuns: parsed.architectRuns || [],
+      layerRuns: parsed.layerRuns || [],
+    };
+  } catch {
+    return {
+      counters: { architect: 0, layers: 0 },
+      architectRuns: [],
+      layerRuns: [],
+    };
+  }
+}
+
+async function writeHistory(history: HistoryFile) {
+  await fs.mkdir(IMAGES_DIR, { recursive: true });
+  await fs.writeFile(HISTORY_FILE, JSON.stringify(history, null, 2));
 }
 
 type FluxPrediction = {
@@ -165,12 +210,24 @@ export async function POST(request: NextRequest) {
 
     const { imageUrl, dataUrl } = await callFluxArchitect(prompt, steps);
     const stamp = buildStamp();
-    const saved = await saveDataUrlFile(dataUrl, "architect", stamp);
+    const history = await readHistory();
+    const nextIndex = history.counters.architect + 1;
+    history.counters.architect = nextIndex;
+    const saved = await saveDataUrlFile(dataUrl, "architect", stamp, nextIndex);
     await updateLatestManifest({
       architect: saved.publicUrl,
       architectFile: saved.fileName,
       architectPrompt: prompt,
+      architectIndex: nextIndex,
     });
+    history.architectRuns.unshift({
+      index: nextIndex,
+      fileName: saved.fileName,
+      publicUrl: saved.publicUrl,
+      prompt,
+      createdAt: new Date().toISOString(),
+    });
+    await writeHistory(history);
     steps.push(`已保存图片: ${saved.fileName}`);
 
     return NextResponse.json({

@@ -6,6 +6,7 @@ import { useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import { useParallaxStore } from "../store";
 import { useAudioStore } from "@/features/audio";
+import { useVisualizerStore } from "@/features/visualizer";
 
 // 双层 WebGL Animator：前景 + 背景两个平面，基于音频驱动的 Shader 光影
 
@@ -77,16 +78,6 @@ const foregroundFragmentShader = `
   }
 `;
 
-function calcBand(freq: Uint8Array | null, startRatio: number, endRatio: number) {
-  if (!freq || freq.length === 0) return 0;
-  const start = Math.floor(freq.length * startRatio);
-  const end = Math.floor(freq.length * endRatio);
-  if (end <= start) return 0;
-  let sum = 0;
-  for (let i = start; i < end; i++) sum += freq[i];
-  return sum / ((end - start) * 255);
-}
-
 export interface LayeredAnimatorProps {
   foregroundUrl: string;
   backgroundUrl: string;
@@ -108,7 +99,13 @@ export function LayeredAnimator({
   const fgMatRef = useRef<THREE.ShaderMaterial | null>(null);
   const { camera, viewport, gl } = useThree();
   const { audioReactive, audioIntensity } = useParallaxStore();
-  const { bassEnergy, frequencyData, isPlaying } = useAudioStore();
+  const { bassEnergy: rawBass, midEnergy: rawMid, highEnergy: rawHigh, isPlaying } = useAudioStore();
+  const { bassEnabled, midEnabled, highEnabled } = useVisualizerStore();
+
+  // Apply toggle switches to energy values
+  const bassEnergy = bassEnabled ? rawBass : 0;
+  const midEnergy = midEnabled ? rawMid : 0;
+  const highEnergy = highEnabled ? rawHigh : 0;
 
   useEffect(() => {
     const debug = gl.debug;
@@ -187,8 +184,8 @@ export function LayeredAnimator({
       const rawBass = bassEnergy * audioIntensity;
       const THRESHOLD = 0.3;
       uBass = rawBass > THRESHOLD ? (rawBass - THRESHOLD) / (1 - THRESHOLD) : 0;
-      uMid = calcBand(frequencyData, 0.25, 0.5) * audioIntensity;   // Snare / 中频
-      uHigh = calcBand(frequencyData, 0.5, 1.0) * audioIntensity;   // 高频
+      uMid = midEnergy * audioIntensity;   // Snare / mid
+      uHigh = highEnergy * audioIntensity;   // highs
     }
 
     bgMat.uniforms.uBass.value = uBass;

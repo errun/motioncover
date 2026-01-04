@@ -4,6 +4,9 @@ Audio feature types.
 
 export interface AudioAnalysisState {
   bassEnergy: number;
+  midEnergy: number;
+  highEnergy: number;
+  snareHit: number;
   frequencyData: Uint8Array | null;
   isPlaying: boolean;
   audioContext: AudioContext | null;
@@ -21,6 +24,9 @@ export interface AudioAnalysisConfig {
 
 export interface AudioActions {
   setBassEnergy: (value: number) => void;
+  setMidEnergy: (value: number) => void;
+  setHighEnergy: (value: number) => void;
+  setSnareHit: (value: number) => void;
   setFrequencyData: (data: Uint8Array | null) => void;
   setIsPlaying: (value: boolean) => void;
   setAudioContext: (ctx: AudioContext | null) => void;

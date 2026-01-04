@@ -40,18 +40,28 @@ const EFFECTS: EffectConfig[] = [
 // 自动模拟 Bass 的 Hook
 function useAutoSimulateBass() {
   const frameRef = useRef(0);
-  const { setBassEnergy, setIsPlaying } = useAudioStore();
+  const { setBassEnergy, setMidEnergy, setHighEnergy, setSnareHit, setIsPlaying } = useAudioStore();
 
   useEffect(() => {
     setIsPlaying(true);
     const interval = setInterval(() => {
       frameRef.current++;
       const bass = Math.sin(frameRef.current * 0.08) * 0.35 + 0.5 + Math.random() * 0.15;
+      const mid = Math.sin(frameRef.current * 0.12 + 1.2) * 0.3 + 0.45 + Math.random() * 0.1;
+      const high = Math.sin(frameRef.current * 0.2 + 2.4) * 0.25 + 0.35 + Math.random() * 0.08;
+      const snare = Math.random() > 0.86 ? 0.9 : 0;
       setBassEnergy(Math.max(0, Math.min(1, bass)));
+      setMidEnergy(Math.max(0, Math.min(1, mid)));
+      setHighEnergy(Math.max(0, Math.min(1, high)));
+      setSnareHit(snare);
     }, 50);
     return () => {
       clearInterval(interval);
       setIsPlaying(false);
+      setBassEnergy(0);
+      setMidEnergy(0);
+      setHighEnergy(0);
+      setSnareHit(0);
     };
   }, [setBassEnergy, setIsPlaying]);
 }

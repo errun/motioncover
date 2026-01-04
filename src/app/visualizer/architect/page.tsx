@@ -22,10 +22,15 @@ type LayerResult = {
   backgroundUrl: string;
   maskUrl?: string;
   debug?: string[];
+  layers?: string[];
+  method?: "rembg" | "qwen";
 };
 
 const DEFAULT_PROMPT =
-  "A vertical street level view of a cyberpunk city. In the immediate center foreground, a single futuristic sports car is positioned clearly. Neon signs glow in the background, and towering skyscrapers fill the distance. The image is rendered in a distinct sharp flat composition style with extremely clear visual separation between the car and the background layers. Crisp, hard outlines define the car's edges. Strong rim lighting highlights the silhouette of the vehicle. High contrast lighting with a synthwave color palette of neon pinks, purples, and blues. Graphic novel aesthetic, sharp focus, no volumetric fog. 4K resolution, highly detailed, intricate textures, masterpiece, best quality, ultra-sharp.";
+  "A vertical street level view of a cyberpunk city. The ONLY foreground subject is a single futuristic sports car centered in the frame. Clean open roadway in front of the car. No street lamps, no poles, no wires, no traffic lights, no foreground signs. Neon signs glow only in the background, and towering skyscrapers fill the distance. The image is rendered in a distinct sharp flat composition style with extremely clear visual separation between the car (foreground) and the city (background). Crisp, hard outlines define the car's edges. Strong rim lighting highlights the silhouette of the vehicle. High contrast lighting with a synthwave color palette of neon pinks and blues. Graphic novel aesthetic, sharp focus, no volumetric fog. 4K resolution, highly detailed, intricate textures, ultra-sharp.";
+const LAYER_TIMEOUT_MS = 240000;
+const LAYER_TIMEOUT_SECONDS = Math.round(LAYER_TIMEOUT_MS / 1000);
+const QWEN_LAYER_COUNT = 4;
 
 export default function ArchitectPage() {
   const [prompt, setPrompt] = useState<string>(DEFAULT_PROMPT);
@@ -38,6 +43,7 @@ export default function ArchitectPage() {
   const [error, setError] = useState<string | null>(null);
   const [layerDebug, setLayerDebug] = useState<string[]>([]);
   const [layerElapsed, setLayerElapsed] = useState(0);
+  const [layerMethod, setLayerMethod] = useState<"rembg" | "qwen">("rembg");
   const [debugSolidBackground, setDebugSolidBackground] = useState(false);
   const [showForeground, setShowForeground] = useState(true);
   const [debugPlainMaterials, setDebugPlainMaterials] = useState(false);
@@ -107,12 +113,16 @@ export default function ArchitectPage() {
       setLayerDebug([]);
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 150000);
+      const timeoutId = setTimeout(() => controller.abort(), LAYER_TIMEOUT_MS);
 
       const res = await fetch("/api/layers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageBase64: architectResult.dataUrl }),
+        body: JSON.stringify({
+          imageBase64: architectResult.dataUrl,
+          method: layerMethod,
+          numLayers: layerMethod === "qwen" ? QWEN_LAYER_COUNT : undefined,
+        }),
         signal: controller.signal,
       });
 
@@ -134,11 +144,13 @@ export default function ArchitectPage() {
         backgroundUrl: data.backgroundUrl,
         maskUrl: data.maskUrl,
         debug: data.debug,
+        layers: data.layers,
+        method: data.method,
       });
       if (data.debug) setLayerDebug(data.debug);
     } catch (err) {
       const message = String(err).includes("AbortError")
-        ? "Surgeon request timed out. Check REPLICATE_API_TOKEN and network access."
+        ? `分层请求超时（${LAYER_TIMEOUT_SECONDS}s）。模型队列可能拥堵，请稍后重试或检查 REPLICATE_API_TOKEN/网络。`
         : String(err);
       setError(message);
     } finally {
@@ -149,26 +161,35 @@ export default function ArchitectPage() {
   const handleLoadLatestLayers = async () => {
     setError(null);
     try {
-      const res = await fetch(`/imgs/latest.json?ts=${Date.now()}`);
+      const res = await fetch(`/imgs/history.json?ts=${Date.now()}`);
       if (!res.ok) {
-        throw new Error("Missing imgs/latest.json. Generate layers first.");
+        throw new Error("Missing imgs/history.json. Generate layers first.");
       }
       const contentType = res.headers.get("content-type") || "";
       if (!contentType.includes("application/json")) {
-        throw new Error("latest.json not reachable. Check middleware allowlist.");
+        throw new Error("history.json not reachable. Check middleware allowlist.");
       }
       const data = (await res.json()) as {
-        layerForeground?: string;
-        layerBackground?: string;
-        layerMask?: string;
+        layerRuns?: Array<{
+          foreground?: string;
+          background?: string;
+          mask?: string;
+          layers?: string[];
+          method?: string;
+        }>;
       };
-      if (!data.layerForeground || !data.layerBackground) {
-        throw new Error("latest.json missing layerForeground/layerBackground.");
+      const runs = Array.isArray(data.layerRuns) ? data.layerRuns : [];
+      const candidates = runs.filter((run) => run.foreground && run.background);
+      if (candidates.length === 0) {
+        throw new Error("history.json has no usable layer runs yet.");
       }
+      const pick = candidates[Math.floor(Math.random() * candidates.length)];
       setLayers({
-        foregroundUrl: data.layerForeground,
-        backgroundUrl: data.layerBackground,
-        maskUrl: data.layerMask,
+        foregroundUrl: pick.foreground!,
+        backgroundUrl: pick.background!,
+        maskUrl: pick.mask || undefined,
+        layers: pick.layers,
+        method: pick.method === "qwen" ? "qwen" : "rembg",
       });
     } catch (err) {
       setError(String(err));
@@ -243,6 +264,41 @@ export default function ArchitectPage() {
             <p className="text-xs text-zinc-500 mb-3">
               使用服务端的 rembg + LaMa 管线，将前景人物抠出并补全背景。当前版本先实现「前景人物层」+「纯背景层」两张图。
             </p>
+
+            <div className="mb-3 space-y-1 text-[11px] text-zinc-400">
+              <div className="flex items-center justify-between gap-2">
+                <span>Layering mode</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setLayerMethod("rembg")}
+                    disabled={isLayering}
+                    className={`px-2 py-1 border rounded ${
+                      layerMethod === "rembg"
+                        ? "bg-zinc-800 text-zinc-100 border-zinc-600"
+                        : "bg-transparent text-zinc-400 border-zinc-700"
+                    }`}
+                  >
+                    rembg + LaMa
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLayerMethod("qwen")}
+                    disabled={isLayering}
+                    className={`px-2 py-1 border rounded ${
+                      layerMethod === "qwen"
+                        ? "bg-zinc-800 text-zinc-100 border-zinc-600"
+                        : "bg-transparent text-zinc-400 border-zinc-700"
+                    }`}
+                  >
+                    qwen-image-layered
+                  </button>
+                </div>
+              </div>
+              <p className="text-[10px] text-zinc-500">
+                Qwen returns {QWEN_LAYER_COUNT} layers (first = foreground, last = background).
+              </p>
+            </div>
 
             <button
               onClick={handleLayer}
@@ -335,7 +391,7 @@ export default function ArchitectPage() {
               onClick={handleLoadLatestLayers}
               className="mt-3 w-full phonk-btn text-sm py-2"
             >
-              Load latest layers from /public/imgs
+              Load random layers from /public/imgs
             </button>
 
             {audioReactive && (
@@ -458,7 +514,7 @@ export default function ArchitectPage() {
                 {canAnimate ? "Audio linked" : "Waiting for layers/audio"}
               </span>
             </div>
-            <div className="h-[420px] bg-black">
+            <div className="h-[60vh] min-h-[520px] bg-black">
               {canAnimate ? (
                 <Canvas camera={{ position: [0, 0, 2], fov: 45 }}>
                   <color attach="background" args={["#000000"]} />

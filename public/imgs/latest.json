@@ -1,9 +1,18 @@
 {
-  "architect": "/imgs/architect-20260101091125470-j8w6.webp",
-  "architectFile": "architect-20260101091125470-j8w6.webp",
-  "architectPrompt": "A vertical street level view of a cyberpunk city. In the immediate center foreground, a single futuristic sports car is positioned clearly. Neon signs glow in the background, and towering skyscrapers fill the distance. The image is rendered in a distinct sharp flat composition style with extremely clear visual separation between the car and the background layers. Crisp, hard outlines define the car's edges. Strong rim lighting highlights the silhouette of the vehicle. High contrast lighting with a synthwave color palette of neon pinks, purples, and blues. Graphic novel aesthetic, sharp focus, no volumetric fog. 4K resolution, highly detailed, intricate textures, masterpiece, best quality, ultra-sharp.",
-  "updatedAt": "2026-01-01T09:11:37.231Z",
-  "layerForeground": "/imgs/layers-foreground-20260101091137220-ydcs.png",
-  "layerBackground": "/imgs/layers-background-20260101091137220-ydcs.webp",
-  "layerMask": "/imgs/layers-mask-20260101091137220-ydcs.png"
+  "architect": "/imgs/architect-0010-20260104104143516-oakv.webp",
+  "architectFile": "architect-0010-20260104104143516-oakv.webp",
+  "architectPrompt": "A vertical medium shot of a cyberpunk character viewed from behind, standing in the center. The character is wearing a translucent iridescent raincoat and a high-tech glowing helmet, completely covering the head. No loose hair. Crisp, hard outlines define the character. The background is a bustling, out-of-focus neon city market, colorful but blurry (bokeh). Cool lighting tones: cyan, acid green, and ice white. Photorealistic fashion photography style. The character creates a dark, solid silhouette against the bright, busy background, ensuring perfect visual separation. 8k resolution, highly detailed textures on the clothing.",
+  "updatedAt": "2026-01-04T10:42:21.236Z",
+  "layerForeground": "/imgs/layers-foreground-0009-20260104104221221-coam.png",
+  "layerBackground": "/imgs/layers-background-0009-20260104104221221-coam.png",
+  "layerMask": "/imgs/layers-mask-0009-20260104104221221-coam.png",
+  "architectIndex": 10,
+  "layerIndex": 9,
+  "layerMethod": "rembg",
+  "layerCount": 2,
+  "layerLayers": [
+    "/imgs/layers-qwen-layer-01-0003-20260104102511400-a2bw.webp",
+    "/imgs/layers-qwen-layer-02-0003-20260104102511400-a2bw.webp",
+    "/imgs/layers-qwen-layer-03-0003-20260104102511400-a2bw.webp"
+  ]
 }

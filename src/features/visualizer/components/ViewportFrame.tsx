@@ -37,11 +37,15 @@ function VcrTimestamp() {
 }
 
 export default function ViewportFrame({ children }: ViewportFrameProps) {
-  const { bassEnergy, isPlaying } = useAudioStore();
-  const { isRecording } = useVisualizerStore();
+  const { bassEnergy: rawBass, midEnergy: rawMid, snareHit, isPlaying } = useAudioStore();
+  const { isRecording, bassEnabled, midEnabled } = useVisualizerStore();
+  const bassEnergy = bassEnabled ? rawBass : 0;
+  const midEnergy = midEnabled ? rawMid : 0;
 
-  // Calculate frame glow based on bass
-  const glowIntensity = Math.min(bassEnergy * 30, 20);
+  // Calculate frame glow based on mids + snare flashes
+  const glowIntensity = Math.min(midEnergy * 24, 16);
+  const snareFlash = snareHit > 0.1 ? Math.min(snareHit * 28, 24) : 0;
+  const frameBorder = snareHit > 0.2 ? "#B026FF" : "#222";
 
   return (
     <div className="relative w-full max-w-md lg:max-w-lg xl:max-w-xl">
@@ -51,9 +55,9 @@ export default function ViewportFrame({ children }: ViewportFrameProps) {
         <div
           className="absolute inset-0 overflow-hidden"
           style={{
-            border: "4px solid #222",
+            border: `4px solid ${frameBorder}`,
             boxShadow: isPlaying
-              ? `0 0 ${glowIntensity}px rgba(57, 255, 20, 0.5), inset 0 0 20px rgba(0,0,0,0.8)`
+              ? `0 0 ${glowIntensity}px rgba(0, 179, 255, 0.35), 0 0 ${snareFlash}px rgba(176, 38, 255, 0.6), inset 0 0 20px rgba(0,0,0,0.8)`
               : "inset 0 0 20px rgba(0,0,0,0.8)",
             background: "#000",
           }}

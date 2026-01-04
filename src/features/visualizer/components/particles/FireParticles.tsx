@@ -12,9 +12,10 @@ import { THREE_CONFIG } from "@/constants";
  */
 export function FireParticles() {
   const pointsRef = useRef<THREE.Points>(null);
-  const { bassEnergy, isPlaying } = useAudioStore();
-  const { audioReactStrength } = useVisualizerStore();
+  const { bassEnergy: rawBass, isPlaying } = useAudioStore();
+  const { audioReactStrength, bassEnabled } = useVisualizerStore();
   const smoothBass = useRef(0);
+  const bassEnergy = bassEnabled ? rawBass : 0;
 
   const particleCount = THREE_CONFIG.particleCount.fire;
   

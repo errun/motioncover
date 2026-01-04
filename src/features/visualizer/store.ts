@@ -15,7 +15,10 @@ export const defaultParams: VisualizerParams = {
   vhsEnabled: true,
   scanlineIntensity: 0.1,
   bloomStrength: 0.4,
-  zoomBlurStrength: 0.0,
+  zoomBlurStrength: 0,
+  bassEnabled: true,
+  midEnabled: true,
+  highEnabled: true,
 };
 
 export const PRESETS: Record<PresetName, { label: string; params: VisualizerParams }> = {
@@ -26,11 +29,11 @@ export const PRESETS: Record<PresetName, { label: string; params: VisualizerPara
   aggressive: {
     label: "AGGRESSIVE",
     params: {
+      ...defaultParams,
       displacementScale: 0.9,
-      audioReactStrength: 1.0,
+      audioReactStrength: 1,
       cameraShakeAmp: 0.7,
       rgbShiftAmount: 0.8,
-      vhsEnabled: true,
       scanlineIntensity: 0.2,
       bloomStrength: 0.6,
       zoomBlurStrength: 0.5,
@@ -39,6 +42,7 @@ export const PRESETS: Record<PresetName, { label: string; params: VisualizerPara
   chill: {
     label: "CHILL",
     params: {
+      ...defaultParams,
       displacementScale: 0.3,
       audioReactStrength: 0.4,
       cameraShakeAmp: 0.1,
@@ -46,17 +50,17 @@ export const PRESETS: Record<PresetName, { label: string; params: VisualizerPara
       vhsEnabled: false,
       scanlineIntensity: 0.05,
       bloomStrength: 0.8,
-      zoomBlurStrength: 0.0,
+      zoomBlurStrength: 0,
     },
   },
   glitch: {
     label: "GLITCH",
     params: {
+      ...defaultParams,
       displacementScale: 0.6,
       audioReactStrength: 0.8,
       cameraShakeAmp: 0.4,
-      rgbShiftAmount: 1.0,
-      vhsEnabled: true,
+      rgbShiftAmount: 1,
       scanlineIntensity: 0.25,
       bloomStrength: 0.3,
       zoomBlurStrength: 0.2,
@@ -65,24 +69,25 @@ export const PRESETS: Record<PresetName, { label: string; params: VisualizerPara
   minimal: {
     label: "MINIMAL",
     params: {
+      ...defaultParams,
       displacementScale: 0.2,
       audioReactStrength: 0.3,
-      cameraShakeAmp: 0.0,
-      rgbShiftAmount: 0.0,
+      cameraShakeAmp: 0,
+      rgbShiftAmount: 0,
       vhsEnabled: false,
-      scanlineIntensity: 0.0,
+      scanlineIntensity: 0,
       bloomStrength: 0.1,
-      zoomBlurStrength: 0.0,
+      zoomBlurStrength: 0,
     },
   },
   earthquake: {
     label: "EARTHQUAKE",
     params: {
+      ...defaultParams,
       displacementScale: 0.7,
       audioReactStrength: 0.9,
-      cameraShakeAmp: 1.0,
+      cameraShakeAmp: 1,
       rgbShiftAmount: 0.6,
-      vhsEnabled: true,
       scanlineIntensity: 0.15,
       bloomStrength: 0.5,
       zoomBlurStrength: 0.8,
@@ -116,6 +121,9 @@ export const useVisualizerStore = create<VisualizerStoreState>((set) => ({
   setScanlineIntensity: (value) => set({ scanlineIntensity: value }),
   setBloomStrength: (value) => set({ bloomStrength: value, currentPreset: "default" }),
   setZoomBlurStrength: (value) => set({ zoomBlurStrength: value, currentPreset: "default" }),
+  setBassEnabled: (value) => set({ bassEnabled: value }),
+  setMidEnabled: (value) => set({ midEnabled: value }),
+  setHighEnabled: (value) => set({ highEnabled: value }),
 
   setIsRecording: (value) => set({ isRecording: value }),
   setRecordingProgress: (value) => set({ recordingProgress: value }),

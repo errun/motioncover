@@ -8,13 +8,15 @@ import { useVisualizerStore, lerp } from "../../store";
 import { THREE_CONFIG } from "@/constants";
 
 /**
- * Glow particle effect - floating particles that pulse with bass
+ * Glow particle effect - floating particles that pulse with mids
  */
 export function GlowParticles() {
   const pointsRef = useRef<THREE.Points>(null);
-  const { bassEnergy, isPlaying } = useAudioStore();
-  const { audioReactStrength } = useVisualizerStore();
-  const smoothBass = useRef(0);
+  const { midEnergy: rawMid, isPlaying } = useAudioStore();
+  const { audioReactStrength, midEnabled } = useVisualizerStore();
+  const smoothMid = useRef(0);
+  // Glow particles respond to mid frequencies
+  const midEnergy = midEnabled ? rawMid : 0;
 
   const particleCount = THREE_CONFIG.particleCount.glow;
   
@@ -35,8 +37,8 @@ export function GlowParticles() {
   useFrame((state) => {
     if (!pointsRef.current || !isPlaying) return;
 
-    smoothBass.current = lerp(smoothBass.current, bassEnergy, 0.15);
-    const bass = smoothBass.current;
+    smoothMid.current = lerp(smoothMid.current, midEnergy, 0.15);
+    const mid = smoothMid.current;
 
     const posArray = pointsRef.current.geometry.attributes.position.array as Float32Array;
 
@@ -45,17 +47,17 @@ export function GlowParticles() {
       const time = state.clock.elapsedTime;
       
       // Floating motion with bass influence
-      posArray[i3] = originalPositions[i3] + Math.sin(time + i) * 0.3 * bass * audioReactStrength;
-      posArray[i3 + 1] = originalPositions[i3 + 1] + Math.cos(time * 0.7 + i) * 0.3 * bass * audioReactStrength;
+      posArray[i3] = originalPositions[i3] + Math.sin(time + i) * 0.3 * mid * audioReactStrength;
+      posArray[i3 + 1] = originalPositions[i3 + 1] + Math.cos(time * 0.7 + i) * 0.3 * mid * audioReactStrength;
       posArray[i3 + 2] = originalPositions[i3 + 2] + Math.sin(time * 1.3 + i) * 0.2;
     }
 
     pointsRef.current.geometry.attributes.position.needsUpdate = true;
     
-    // Pulse size with bass
+    // Pulse size with mid frequencies
     const material = pointsRef.current.material as THREE.PointsMaterial;
-    material.size = 0.1 + bass * audioReactStrength * 0.15;
-    material.opacity = 0.4 + bass * 0.4;
+    material.size = 0.1 + mid * audioReactStrength * 0.15;
+    material.opacity = 0.4 + mid * 0.4;
   });
 
   if (!isPlaying) return null;

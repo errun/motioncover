@@ -231,7 +231,7 @@ export function ParallaxMesh({ imageUrl, depthMapUrl }: ParallaxMeshProps) {
     audioIntensity,
   } = useParallaxStore();
   
-  const { bassEnergy, isPlaying, frequencyData } = useAudioStore();
+  const { midEnergy, highEnergy, snareHit, isPlaying } = useAudioStore();
 
   // 加载纹理
   const [texture, depthMap] = useTexture([imageUrl, depthMapUrl]);
@@ -266,41 +266,9 @@ export function ParallaxMesh({ imageUrl, depthMapUrl }: ParallaxMeshProps) {
   );
 
   // 计算高频能量（用于色差）
-  const calculateHighFreqEnergy = (freqData: Uint8Array | null): number => {
-    if (!freqData || freqData.length === 0) return 0;
-    const highStart = Math.floor(freqData.length * 0.5);
-    let sum = 0;
-    for (let i = highStart; i < freqData.length; i++) {
-      sum += freqData[i];
-    }
-    return sum / ((freqData.length - highStart) * 255);
-  };
 
   // 🆕 检测 Snare（军鼓）- 中高频瞬态
   // Snare 主要在 2-5kHz 范围，检测突然的能量增加
-  const prevHighFreqRef = useRef(0);
-  const snareRef = useRef(0);
-
-  const detectSnare = (freqData: Uint8Array | null): number => {
-    if (!freqData || freqData.length === 0) return 0;
-
-    // Snare 频率范围：约 2-5kHz（FFT bin 的 25%-50%）
-    const snareStart = Math.floor(freqData.length * 0.25);
-    const snareEnd = Math.floor(freqData.length * 0.5);
-
-    let sum = 0;
-    for (let i = snareStart; i < snareEnd; i++) {
-      sum += freqData[i];
-    }
-    const currentEnergy = sum / ((snareEnd - snareStart) * 255);
-
-    // 检测瞬态：当前能量比上一帧高出多少
-    const delta = currentEnergy - prevHighFreqRef.current;
-    prevHighFreqRef.current = currentEnergy;
-
-    // 只有正向增量（突然增加）才算 Snare hit
-    return delta > 0.05 ? Math.min(delta * 3, 1.0) : 0;
-  };
 
   // 状态 refs
   const breathingRef = useRef(0);
@@ -352,27 +320,18 @@ export function ParallaxMesh({ imageUrl, depthMapUrl }: ParallaxMeshProps) {
     }
 
     // ===== 音频分析 =====
-    const rawBass = audioReactive && isPlaying ? bassEnergy * audioIntensity : 0;
-    const highFreq = audioReactive && isPlaying ? calculateHighFreqEnergy(frequencyData) * audioIntensity : 0;
+    const rawMid = audioReactive && isPlaying ? midEnergy * audioIntensity : 0;
+    const highFreq = audioReactive && isPlaying ? highEnergy * audioIntensity : 0;
+    const snare = audioReactive && isPlaying ? snareHit * audioIntensity : 0;
 
-    // 🆕 Snare 检测（瞬态检测）
-    const snareHit = audioReactive && isPlaying ? detectSnare(frequencyData) * audioIntensity : 0;
-
-    // 阈值门限：Bass > 30% 才触发效果
+    // Threshold gate: mid needs to clear 30%
     const THRESHOLD = 0.3;
-    const gatedBass = rawBass > THRESHOLD
-      ? (rawBass - THRESHOLD) / (1 - THRESHOLD)
+    const gatedMid = rawMid > THRESHOLD
+      ? (rawMid - THRESHOLD) / (1 - THRESHOLD)
       : 0;
 
-    // 🆕 Snare 平滑（快速攻击，中速衰减）
-    if (snareHit > snareRef.current) {
-      snareRef.current = snareHit;  // 瞬时攻击
-    } else {
-      snareRef.current *= 0.85;     // 衰减
-    }
-
     // ===== 1. 呼吸感 BREATHING =====
-    const breathTarget = gatedBass;
+    const breathTarget = gatedMid;
     if (breathTarget > breathingRef.current) {
       breathingRef.current += (breathTarget - breathingRef.current) * 0.6;
     } else {
@@ -380,12 +339,12 @@ export function ParallaxMesh({ imageUrl, depthMapUrl }: ParallaxMeshProps) {
     }
 
     // ===== 2. 微旋转 MICRO-ROTATION =====
-    const rotTarget = (gatedBass - 0.5) * 2 * (Math.sin(t * 3) > 0 ? 1 : -1);
+    const rotTarget = (gatedMid - 0.5) * 2 * (Math.sin(t * 3) > 0 ? 1 : -1);
     microRotRef.current += (rotTarget - microRotRef.current) * 0.1;
 
     // ===== 3. CAMERA ZOOM PUNCH =====
     const baseCamZ = baseCameraZRef.current;
-    const zoomPunch = gatedBass * 0.8;
+    const zoomPunch = gatedMid * 0.8;
     const targetCamZ = baseCamZ - zoomPunch;
 
     if (targetCamZ < camera.position.z) {
@@ -395,8 +354,8 @@ export function ParallaxMesh({ imageUrl, depthMapUrl }: ParallaxMeshProps) {
     }
 
     // ===== 4. DROP 时相机震动 =====
-    if (gatedBass > 0.7) {
-      const shakeIntensity = (gatedBass - 0.7) * 0.15;
+    if (gatedMid > 0.7) {
+      const shakeIntensity = (gatedMid - 0.7) * 0.15;
       cameraShakeRef.current.x = (Math.random() - 0.5) * shakeIntensity;
       cameraShakeRef.current.y = (Math.random() - 0.5) * shakeIntensity;
     } else {
@@ -405,8 +364,8 @@ export function ParallaxMesh({ imageUrl, depthMapUrl }: ParallaxMeshProps) {
     }
 
     // 🆕 Snare 时额外震动
-    if (snareRef.current > 0.3) {
-      const snareShake = snareRef.current * 0.05;
+    if (snare > 0.3) {
+      const snareShake = snare * 0.05;
       cameraShakeRef.current.x += (Math.random() - 0.5) * snareShake;
       cameraShakeRef.current.y += (Math.random() - 0.5) * snareShake;
     }
@@ -435,11 +394,11 @@ export function ParallaxMesh({ imageUrl, depthMapUrl }: ParallaxMeshProps) {
 
     // ===== 更新 SHADER UNIFORMS =====
     materialRef.current.uniforms.uStrength.value = parallaxStrength;
-    materialRef.current.uniforms.uBass.value = gatedBass;
+    materialRef.current.uniforms.uBass.value = gatedMid;
     materialRef.current.uniforms.uHighFreq.value = highFreq;
     materialRef.current.uniforms.uBreathing.value = breathingRef.current;
     materialRef.current.uniforms.uMicroRotation.value = microRotRef.current;
-    materialRef.current.uniforms.uSnare.value = snareRef.current;  // 🆕
+    materialRef.current.uniforms.uSnare.value = snare;  // 🆕
     materialRef.current.uniforms.uTime.value = t;                   // 🆕
   });
 
