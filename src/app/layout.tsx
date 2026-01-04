@@ -18,7 +18,7 @@ const spaceMono = Space_Mono({
   weight: ["400", "700"],
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://motioncover.vercel.app';
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.motioncover.app";
 
 export const metadata: Metadata = {
   title: {

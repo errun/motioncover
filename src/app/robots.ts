@@ -5,7 +5,7 @@
 import { MetadataRoute } from 'next';
 
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://motioncover.vercel.app';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.motioncover.app";
   
   return {
     rules: [
@@ -18,4 +18,3 @@ export default function robots(): MetadataRoute.Robots {
     sitemap: `${baseUrl}/sitemap.xml`,
   };
 }
-
