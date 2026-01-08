@@ -1,24 +1,50 @@
 /**
- * sitemap.xml 生成
+ * sitemap.xml generation
  */
 
-import { MetadataRoute } from 'next';
+import { MetadataRoute } from "next";
+import { withLocalePathname } from "@/i18n/routing";
+
+const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.motioncover.app";
+
+const ROUTES: string[] = [
+  "/",
+  "/downloader",
+  "/spotify-canvas",
+  "/spotify-canvas/dimensions",
+  "/spotify-canvas/length",
+  "/spotify-canvas/maker",
+  "/spotify-canvas/download",
+  "/about",
+  "/faq",
+  "/charts",
+  "/visualizer/cover-25d",
+  "/visualizer/effects",
+  "/visualizer/architect",
+];
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.motioncover.app";
-  
-  return [
-    {
-      url: `${baseUrl}/visualizer/cover-25d`,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 1,
-    },
-    {
-      url: `${baseUrl}/visualizer/architect`,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 0.8,
-    },
-  ];
+  const now = new Date();
+
+  return ROUTES.map((pathname) => {
+    const enUrl = `${baseUrl}${withLocalePathname(pathname, "en")}`;
+    const zhUrl = `${baseUrl}${withLocalePathname(pathname, "zh")}`;
+
+    const isHome = pathname === "/";
+    const isSpotifyCanvas = pathname === "/spotify-canvas";
+
+    return {
+      url: enUrl,
+      lastModified: now,
+      changeFrequency: isHome ? "weekly" : isSpotifyCanvas ? "weekly" : "monthly",
+      priority: isHome ? 1 : isSpotifyCanvas ? 0.9 : 0.7,
+      alternates: {
+        languages: {
+          en: enUrl,
+          "zh-CN": zhUrl,
+        },
+      },
+    };
+  });
 }
+

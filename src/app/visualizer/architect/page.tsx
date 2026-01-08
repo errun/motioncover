@@ -3,7 +3,12 @@
 import { Suspense, useEffect, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import Link from "next/link";
-import { LayeredAnimator, useParallaxStore } from "@/features/parallax";
+import {
+  AutoCameraRig,
+  LayeredAnimator,
+  SpeedParticles,
+  useParallaxStore,
+} from "@/features/parallax";
 import { AudioPlayer } from "@/features/visualizer/components";
 import { useAudioStore } from "@/features/audio";
 
@@ -47,7 +52,13 @@ export default function ArchitectPage() {
   const [debugSolidBackground, setDebugSolidBackground] = useState(false);
   const [showForeground, setShowForeground] = useState(true);
   const [debugPlainMaterials, setDebugPlainMaterials] = useState(false);
-  const { audioFileUrl } = useAudioStore();
+  const [enableCameraDrift, setEnableCameraDrift] = useState(true);
+  const [enableCameraShake, setEnableCameraShake] = useState(true);
+  const [enableAutoCameraRig, setEnableAutoCameraRig] = useState(true);
+  const [enableSpeedParticles, setEnableSpeedParticles] = useState(true);
+  const [debugCameraThreshold, setDebugCameraThreshold] = useState(false);
+  const [debugCameraThresholdValue, setDebugCameraThresholdValue] = useState(0.5);
+  const { audioFileUrl, bassEnergy, isPlaying } = useAudioStore();
   const {
     audioReactive,
     audioIntensity,
@@ -76,6 +87,13 @@ export default function ArchitectPage() {
 
   const canAnimate =
     !!layers?.foregroundUrl && !!layers?.backgroundUrl && !!audioFileUrl;
+
+  const effectiveBass = audioReactive && isPlaying ? bassEnergy * audioIntensity : 0;
+  const prodThreshold = 0.7;
+  const debugThreshold = Math.min(0.95, Math.max(0.1, debugCameraThresholdValue));
+  const activeThreshold = debugCameraThreshold ? debugThreshold : prodThreshold;
+  const bassPercent = Math.round(Math.min(1, effectiveBass) * 100);
+  const isAboveThreshold = effectiveBass >= activeThreshold;
 
   const handleGenerate = async () => {
     try {
@@ -387,6 +405,99 @@ export default function ArchitectPage() {
               </label>
             </div>
 
+            <div className="mt-3 text-xs text-zinc-400">
+              <div className="text-[11px] text-zinc-500 mb-2">Camera effects</div>
+              <label className="flex items-center gap-2 mb-2">
+                <input
+                  type="checkbox"
+                  checked={enableAutoCameraRig}
+                  onChange={(e) => setEnableAutoCameraRig(e.target.checked)}
+                  className="w-4 h-4 rounded border-zinc-600 bg-black"
+                />
+                <span>Auto camera rig</span>
+              </label>
+              <label className="flex items-center gap-2 mb-2">
+                <input
+                  type="checkbox"
+                  checked={enableCameraDrift}
+                  onChange={(e) => setEnableCameraDrift(e.target.checked)}
+                  className="w-4 h-4 rounded border-zinc-600 bg-black"
+                />
+                <span>Base drift (Lissajous)</span>
+              </label>
+              <label className="flex items-center gap-2 mb-2">
+                <input
+                  type="checkbox"
+                  checked={enableCameraShake}
+                  onChange={(e) => setEnableCameraShake(e.target.checked)}
+                  className="w-4 h-4 rounded border-zinc-600 bg-black"
+                />
+                <span>Bass shake (&gt;= 70%)</span>
+              </label>
+              <label className="flex items-center gap-2 mt-2">
+                <input
+                  type="checkbox"
+                  checked={debugCameraThreshold}
+                  onChange={(e) => setDebugCameraThreshold(e.target.checked)}
+                  className="w-4 h-4 rounded border-zinc-600 bg-black"
+                />
+                <span>Debug threshold overlay</span>
+              </label>
+              <label className="flex items-center gap-2 mt-2">
+                <input
+                  type="checkbox"
+                  checked={enableSpeedParticles}
+                  onChange={(e) => setEnableSpeedParticles(e.target.checked)}
+                  className="w-4 h-4 rounded border-zinc-600 bg-black"
+                />
+                <span>Speed particles</span>
+              </label>
+              {debugCameraThreshold && (
+                <div className="mt-2 text-[11px] text-zinc-500">
+                  <div className="flex items-center justify-between mb-2">
+                    <span>Debug threshold</span>
+                    <span>{Math.round(debugThreshold * 100)}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0.3}
+                    max={0.9}
+                    step={0.05}
+                    value={debugThreshold}
+                    onChange={(e) => setDebugCameraThresholdValue(parseFloat(e.target.value))}
+                    className="w-full accent-blue-500 mb-2"
+                  />
+                  <div className="flex items-center justify-between mb-1">
+                    <span>Effective bass</span>
+                    <span className={isAboveThreshold ? "text-green-400" : "text-zinc-400"}>
+                      {bassPercent}%
+                    </span>
+                  </div>
+                  <div className="relative h-2 bg-zinc-900 border border-zinc-700 rounded overflow-hidden">
+                    <div
+                      className="absolute top-0 bottom-0 w-px bg-red-500/80"
+                      style={{ left: `${debugThreshold * 100}%` }}
+                    />
+                    <div
+                      className="absolute top-0 bottom-0 w-px bg-zinc-600"
+                      style={{ left: `${prodThreshold * 100}%` }}
+                    />
+                    <div
+                      className="h-full"
+                      style={{
+                        width: `${bassPercent}%`,
+                        background: isAboveThreshold ? "#22c55e" : "#3b82f6",
+                        transition: "width 80ms linear",
+                      }}
+                    />
+                  </div>
+                  <div className="mt-1 text-[10px] text-zinc-600">
+                    Debug {Math.round(debugThreshold * 100)}% / Prod 70%
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button
               onClick={handleLoadLatestLayers}
               className="mt-3 w-full phonk-btn text-sm py-2"
@@ -516,9 +627,19 @@ export default function ArchitectPage() {
             </div>
             <div className="h-[60vh] min-h-[520px] bg-black">
               {canAnimate ? (
-                <Canvas camera={{ position: [0, 0, 2], fov: 45 }}>
+                <Canvas camera={{ position: [0, 0, 2], fov: 50 }}>
                   <color attach="background" args={["#000000"]} />
                   <ambientLight intensity={0.6} />
+                  {enableAutoCameraRig && (
+                    <AutoCameraRig
+                      enableDrift={enableCameraDrift}
+                      enableShake={enableCameraShake}
+                      shakeThreshold={prodThreshold}
+                      debugThreshold={debugCameraThreshold}
+                      debugThresholdValue={debugThreshold}
+                    />
+                  )}
+                  {enableSpeedParticles && <SpeedParticles />}
                   <Suspense fallback={null}>
                     <LayeredAnimator
                       foregroundUrl={layers!.foregroundUrl}

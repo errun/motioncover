@@ -97,7 +97,7 @@ export function LayeredAnimator({
   const fgTex = useTexture(foregroundUrl);
   const bgMatRef = useRef<THREE.ShaderMaterial | null>(null);
   const fgMatRef = useRef<THREE.ShaderMaterial | null>(null);
-  const { camera, viewport, gl } = useThree();
+  const { viewport, gl } = useThree();
   const { audioReactive, audioIntensity } = useParallaxStore();
   const { bassEnergy: rawBass, midEnergy: rawMid, highEnergy: rawHigh, isPlaying } = useAudioStore();
   const { bassEnabled, midEnabled, highEnabled } = useVisualizerStore();
@@ -180,13 +180,13 @@ export function LayeredAnimator({
     let uMid = 0;
     let uHigh = 0;
 
-    if (enabled) {
-      const rawBass = bassEnergy * audioIntensity;
-      const THRESHOLD = 0.3;
-      uBass = rawBass > THRESHOLD ? (rawBass - THRESHOLD) / (1 - THRESHOLD) : 0;
-      uMid = midEnergy * audioIntensity;   // Snare / mid
-      uHigh = highEnergy * audioIntensity;   // highs
-    }
+    const bassForShader = enabled ? bassEnergy * audioIntensity : 0;
+    const midForShader = enabled ? midEnergy * audioIntensity : 0;
+    const highForShader = enabled ? highEnergy * audioIntensity : 0;
+    const THRESHOLD = 0.3;
+    uBass = bassForShader > THRESHOLD ? (bassForShader - THRESHOLD) / (1 - THRESHOLD) : 0;
+    uMid = midForShader;   // Snare / mid
+    uHigh = highForShader;   // highs
 
     bgMat.uniforms.uBass.value = uBass;
     bgMat.uniforms.uMid.value = uMid;
@@ -198,9 +198,6 @@ export function LayeredAnimator({
     fgMat.uniforms.uHigh.value = uHigh;
     fgMat.uniforms.uTime.value = t;
 
-    // 低音驱动轻微 camera push-in
-    // 这里只更新 uniforms，不直接修改 camera，避免与上层 Canvas 的 camera hook 规则冲突
-    camera.lookAt(0, 0, 0);
   });
 
   return (

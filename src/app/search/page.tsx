@@ -1,11 +1,12 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Link from "next/link";
 import Image from "next/image";
+import { getLocaleFromPathname, withLocalePathname } from "@/i18n/routing";
 
 interface Artist {
   id: string;
@@ -27,6 +28,8 @@ interface Track {
 
 function SearchContent() {
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const locale = getLocaleFromPathname(pathname);
   const query = searchParams.get("q") || "";
   const [results, setResults] = useState<{ artists: Artist[]; tracks: Track[] }>({ artists: [], tracks: [] });
   const [loading, setLoading] = useState(true);
@@ -92,7 +95,7 @@ function SearchContent() {
             {results.artists.map((artist) => (
               <Link
                 key={artist.id}
-                href={`/artist/${artist.id}`}
+                href={withLocalePathname(`/artist/${artist.id}`, locale)}
                 className="bg-[#181818] hover:bg-[#282828] p-4 rounded-lg transition-colors group"
               >
                 <div className="aspect-square relative mb-4 rounded-full overflow-hidden bg-[#282828]">
@@ -122,7 +125,7 @@ function SearchContent() {
             {results.tracks.map((track) => (
               <Link
                 key={track.id}
-                href={`/canvas?link=spotify:track:${track.id}`}
+                href={`${withLocalePathname("/canvas", locale)}?link=spotify:track:${track.id}`}
                 className="flex items-center gap-4 p-3 rounded-lg hover:bg-[#282828] transition-colors group"
               >
                 <div className="w-12 h-12 relative rounded overflow-hidden bg-[#282828] flex-shrink-0">

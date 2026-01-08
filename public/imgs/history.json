@@ -1,9 +1,23 @@
 {
   "counters": {
-    "architect": 10,
-    "layers": 9
+    "architect": 12,
+    "layers": 10
   },
   "architectRuns": [
+    {
+      "index": 12,
+      "fileName": "architect-0012-20260106094413092-ft5e.webp",
+      "publicUrl": "/imgs/architect-0012-20260106094413092-ft5e.webp",
+      "prompt": "A vertical street level view of a cyberpunk city. The ONLY foreground subject is a single futuristic sports car centered in the frame. Clean open roadway in front of the car. No street lamps, no poles, no wires, no traffic lights, no foreground signs. Neon signs glow only in the background, and towering skyscrapers fill the distance. The image is rendered in a distinct sharp flat composition style with extremely clear visual separation between the car (foreground) and the city (background). Crisp, hard outlines define the car's edges. Strong rim lighting highlights the silhouette of the vehicle. High contrast lighting with a synthwave color palette of neon pinks and blues. Graphic novel aesthetic, sharp focus, no volumetric fog. 4K resolution, highly detailed, intricate textures, ultra-sharp.",
+      "createdAt": "2026-01-06T09:44:13.100Z"
+    },
+    {
+      "index": 11,
+      "fileName": "architect-0011-20260104114919762-i8jo.webp",
+      "publicUrl": "/imgs/architect-0011-20260104114919762-i8jo.webp",
+      "prompt": "A vertical street level view of a cyberpunk city. The ONLY foreground subject is a single futuristic sports car centered in the frame. Clean open roadway in front of the car. No street lamps, no poles, no wires, no traffic lights, no foreground signs. Neon signs glow only in the background, and towering skyscrapers fill the distance. The image is rendered in a distinct sharp flat composition style with extremely clear visual separation between the car (foreground) and the city (background). Crisp, hard outlines define the car's edges. Strong rim lighting highlights the silhouette of the vehicle. High contrast lighting with a synthwave color palette of neon pinks and blues. Graphic novel aesthetic, sharp focus, no volumetric fog. 4K resolution, highly detailed, intricate textures, ultra-sharp.",
+      "createdAt": "2026-01-04T11:49:19.776Z"
+    },
     {
       "index": 10,
       "fileName": "architect-0010-20260104104143516-oakv.webp",
@@ -76,6 +90,16 @@
     }
   ],
   "layerRuns": [
+    {
+      "index": 10,
+      "foreground": "/imgs/layers-foreground-0010-20260104114932558-6lz2.png",
+      "background": "/imgs/layers-background-0010-20260104114932558-6lz2.webp",
+      "mask": "/imgs/layers-mask-0010-20260104114932558-6lz2.png",
+      "createdAt": "2026-01-04T11:49:32.577Z",
+      "degraded": true,
+      "degradeReason": "rate_limited_lama_429",
+      "method": "rembg"
+    },
     {
       "index": 9,
       "foreground": "/imgs/layers-foreground-0009-20260104104221221-coam.png",

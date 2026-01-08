@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Space_Mono } from "next/font/google";
+import { getRequestLocale } from "@/i18n/server";
+import { localeToLang } from "@/i18n/routing";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -22,26 +24,26 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.motioncover.app
 
 export const metadata: Metadata = {
   title: {
-    default: "Canvas Downloader for Spotify · Download Spotify Canvas loops",
-    template: "%s | Canvas Downloader",
+    default: "MotionCover",
+    template: "%s | MotionCover",
   },
-  description: "Download Spotify Canvas videos for free. Paste a track link to download Canvas loops.",
-  keywords: ["Spotify", "Canvas", "Download", "Video", "Music", "Loop", "Motion Cover"],
-  authors: [{ name: "Motion Cover" }],
-  creator: "Motion Cover",
+  description: "Download Spotify Canvas videos and explore music visualizer tools.",
+  keywords: ["Spotify Canvas", "Canvas Downloader", "Motion Cover", "Music Visualizer"],
+  authors: [{ name: "MotionCover" }],
+  creator: "MotionCover",
   metadataBase: new URL(siteUrl),
   openGraph: {
     type: "website",
     locale: "en_US",
     url: siteUrl,
-    siteName: "Canvas Downloader for Spotify",
-    title: "Canvas Downloader for Spotify",
-    description: "Download Spotify Canvas videos for free. Paste a track link to download Canvas loops.",
+    siteName: "MotionCover",
+    title: "MotionCover",
+    description: "Download Spotify Canvas videos and explore music visualizer tools.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Canvas Downloader for Spotify",
-    description: "Download Spotify Canvas videos for free",
+    title: "MotionCover",
+    description: "Download Spotify Canvas videos and explore music visualizer tools.",
   },
   robots: {
     index: true,
@@ -49,12 +51,10 @@ export const metadata: Metadata = {
   },
 };
 
-// JSON-LD 结构化数据
-const jsonLd = {
+const baseJsonLd = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  name: "Canvas Downloader for Spotify",
-  description: "Download Spotify Canvas videos for free",
+  name: "MotionCover",
   url: siteUrl,
   applicationCategory: "MultimediaApplication",
   operatingSystem: "Web",
@@ -70,8 +70,20 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = getRequestLocale();
+  const lang = localeToLang(locale);
+
+  const jsonLd = {
+    ...baseJsonLd,
+    description:
+      locale === "zh"
+        ? "下载 Spotify Canvas 循环视频，并探索音乐可视化工具。"
+        : "Download Spotify Canvas videos and explore music visualizer tools.",
+    inLanguage: lang,
+  };
+
   return (
-    <html lang="en">
+    <html lang={lang}>
       <head>
         <script
           type="application/ld+json"

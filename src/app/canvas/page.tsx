@@ -1,6 +1,7 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -12,9 +13,12 @@ import {
   NetworkErrorFallback,
   LoadingSpinner,
 } from "@/features/canvas-downloader";
+import { getLocaleFromPathname, withLocalePathname } from "@/i18n/routing";
 
 function CanvasContent() {
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const locale = getLocaleFromPathname(pathname);
   const link = searchParams.get("link") || "";
   const { trackData, loading, error, spotifyTitle, spotifyThumbnail } = useTrackData(link);
 
@@ -26,7 +30,12 @@ function CanvasContent() {
     return (
       <div className="text-center py-20">
         <p className="text-red-400 mb-4">{error}</p>
-        <a href="/" className="text-[#1db954] hover:underline">Go back home</a>
+        <Link
+          href={withLocalePathname("/", locale)}
+          className="text-[#1db954] hover:underline"
+        >
+          {locale === "zh" ? "返回首页" : "Go back home"}
+        </Link>
       </div>
     );
   }
