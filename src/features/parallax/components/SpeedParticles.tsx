@@ -37,7 +37,11 @@ export function SpeedParticles({
     const points = pointsRef.current;
     if (!points) return;
     const positionAttr = points.geometry.getAttribute("position");
-    positionAttr.setUsage(THREE.DynamicDrawUsage);
+    if (positionAttr instanceof THREE.BufferAttribute) {
+      positionAttr.setUsage(THREE.DynamicDrawUsage);
+    } else {
+      positionAttr.data.setUsage(THREE.DynamicDrawUsage);
+    }
   }, []);
 
   useFrame((_, delta) => {
@@ -67,9 +71,7 @@ export function SpeedParticles({
       <bufferGeometry>
         <bufferAttribute
           attach="attributes-position"
-          array={positions}
-          itemSize={3}
-          count={count}
+          args={[positions, 3]}
         />
       </bufferGeometry>
       <pointsMaterial

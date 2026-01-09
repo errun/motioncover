@@ -65,12 +65,12 @@ const baseJsonLd = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const locale = getRequestLocale();
+  const locale = await getRequestLocale();
   const lang = localeToLang(locale);
 
   const jsonLd = {

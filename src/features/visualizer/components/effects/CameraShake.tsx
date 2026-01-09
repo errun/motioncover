@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
+import * as THREE from "three";
 import { useAudioStore } from "@/features/audio";
 import { useVisualizerStore, lerp } from "../../store";
 
@@ -14,7 +15,9 @@ export function CameraShake() {
   const { bassEnergy: rawBass, isPlaying } = useAudioStore();
   const { cameraShakeAmp, audioReactStrength, bassEnabled } = useVisualizerStore();
   const baseZRef = useRef(camera.position.z);
-  const baseFovRef = useRef(camera.fov);
+  const baseFovRef = useRef(
+    camera instanceof THREE.PerspectiveCamera ? camera.fov : 50,
+  );
   const targetPos = useRef({ x: 0, y: 0, z: baseZRef.current });
   const shakeOffsetRef = useRef({ x: 0, y: 0, z: 0 });
   const shakeStrengthRef = useRef(0);
@@ -57,17 +60,19 @@ export function CameraShake() {
     camera.position.y = lerp(camera.position.y, targetPos.current.y, 0.2);
     camera.position.z = lerp(camera.position.z, targetPos.current.z, 0.2);
 
-    // Subtle zoom via FOV (clamped 45-50)
-    const maxFov = 50;
-    const minFov = 45;
-    const fovBass = isPlaying ? bass : 0;
-    const reactiveFov = Math.min(
-      maxFov,
-      Math.max(minFov, lerp(maxFov, minFov, Math.min(1, fovBass)))
-    );
-    const targetFov = isPlaying ? reactiveFov : baseFovRef.current;
-    camera.fov = lerp(camera.fov, targetFov, 0.08);
-    camera.updateProjectionMatrix();
+    if (camera instanceof THREE.PerspectiveCamera) {
+      // Subtle zoom via FOV (clamped 45-50)
+      const maxFov = 50;
+      const minFov = 45;
+      const fovBass = isPlaying ? bass : 0;
+      const reactiveFov = Math.min(
+        maxFov,
+        Math.max(minFov, lerp(maxFov, minFov, Math.min(1, fovBass))),
+      );
+      const targetFov = isPlaying ? reactiveFov : baseFovRef.current;
+      camera.fov = lerp(camera.fov, targetFov, 0.08);
+      camera.updateProjectionMatrix();
+    }
   });
 
   return null;

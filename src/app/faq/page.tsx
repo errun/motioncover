@@ -6,8 +6,8 @@ import { withLocalePathname } from "@/i18n/routing";
 
 const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.motioncover.app";
 
-export function generateMetadata(): Metadata {
-  const locale = getRequestLocale();
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getRequestLocale();
   const isZh = locale === "zh";
 
   const title = isZh ? "常见问题" : "Frequently Asked Questions";
@@ -28,8 +28,8 @@ export function generateMetadata(): Metadata {
   };
 }
 
-export default function FAQPage() {
-  const locale = getRequestLocale();
+export default async function FAQPage() {
+  const locale = await getRequestLocale();
   const isZh = locale === "zh";
 
   const heading = isZh ? "常见问题" : "Frequently Asked Questions";
