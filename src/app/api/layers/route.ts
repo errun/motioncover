@@ -4,6 +4,8 @@ import path from "path";
 
 export const runtime = "nodejs";
 
+const IS_VERCEL = process.env.VERCEL === "1";
+
 const IMAGES_DIR = path.join(process.cwd(), "public", "imgs");
 
 function buildStamp() {
@@ -181,42 +183,48 @@ export async function POST(request: NextRequest) {
       const layerDataUrls = await Promise.all(
         qwenOutputs.map((url) => toDataUrl(url))
       );
-      const stamp = buildStamp();
-      const history = await readHistory();
-      const nextIndex = history.counters.layers + 1;
-      history.counters.layers = nextIndex;
-
-      const savedLayers = await Promise.all(
-        layerDataUrls.map((dataUrl, index) =>
-          saveDataUrlFile(
-            dataUrl,
-            `layers-qwen-layer-${String(index + 1).padStart(2, "0")}`,
-            stamp,
-            nextIndex
-          )
-        )
-      );
-
       const foregroundDataUrl = layerDataUrls[0];
       const backgroundDataUrl = layerDataUrls[layerDataUrls.length - 1];
 
-      await updateLatestManifest({
-        layerForeground: savedLayers[0]?.publicUrl,
-        layerBackground: savedLayers[savedLayers.length - 1]?.publicUrl,
-        layerLayers: savedLayers.map((layer) => layer.publicUrl),
-        layerIndex: nextIndex,
-        layerMethod: "qwen",
-        layerCount: savedLayers.length,
-      });
-      history.layerRuns.unshift({
-        index: nextIndex,
-        foreground: savedLayers[0]?.publicUrl || "",
-        background: savedLayers[savedLayers.length - 1]?.publicUrl || "",
-        layers: savedLayers.map((layer) => layer.publicUrl),
-        createdAt: new Date().toISOString(),
-        method: "qwen",
-      });
-      await writeHistory(history);
+      if (IS_VERCEL) {
+        push(
+          "检测到 Vercel Serverless：文件系统为只读，已跳过写入 public/imgs（如需持久化请接入 Blob/S3/KV）"
+        );
+      } else {
+        const stamp = buildStamp();
+        const history = await readHistory();
+        const nextIndex = history.counters.layers + 1;
+        history.counters.layers = nextIndex;
+
+        const savedLayers = await Promise.all(
+          layerDataUrls.map((dataUrl, index) =>
+            saveDataUrlFile(
+              dataUrl,
+              `layers-qwen-layer-${String(index + 1).padStart(2, "0")}`,
+              stamp,
+              nextIndex
+            )
+          )
+        );
+
+        await updateLatestManifest({
+          layerForeground: savedLayers[0]?.publicUrl,
+          layerBackground: savedLayers[savedLayers.length - 1]?.publicUrl,
+          layerLayers: savedLayers.map((layer) => layer.publicUrl),
+          layerIndex: nextIndex,
+          layerMethod: "qwen",
+          layerCount: savedLayers.length,
+        });
+        history.layerRuns.unshift({
+          index: nextIndex,
+          foreground: savedLayers[0]?.publicUrl || "",
+          background: savedLayers[savedLayers.length - 1]?.publicUrl || "",
+          layers: savedLayers.map((layer) => layer.publicUrl),
+          createdAt: new Date().toISOString(),
+          method: "qwen",
+        });
+        await writeHistory(history);
+      }
 
       const elapsed = Date.now() - startedAt;
       push(`Done in ${elapsed}ms`);
@@ -285,30 +293,52 @@ export async function POST(request: NextRequest) {
 	      }
 	      push(`背景生成完成: ${lamaResult.substring(0, 50)}...`);
 	      const backgroundDataUrl = await toDataUrl(lamaResult);
-	      const stamp = buildStamp();
-	      const history = await readHistory();
-	      const nextIndex = history.counters.layers + 1;
-	      history.counters.layers = nextIndex;
-	      const savedForeground = await saveDataUrlFile(foregroundDataUrl, "layers-foreground", stamp, nextIndex);
-	      const savedBackground = await saveDataUrlFile(backgroundDataUrl, "layers-background", stamp, nextIndex);
-	      const savedMask = await saveDataUrlFile(maskDataUrl, "layers-mask", stamp, nextIndex);
-	      await updateLatestManifest({
-	        layerForeground: savedForeground.publicUrl,
-	        layerBackground: savedBackground.publicUrl,
-	        layerMask: savedMask.publicUrl,
-	        layerIndex: nextIndex,
-	        layerMethod: "rembg",
-	        layerCount: 2,
-	      });
-	      history.layerRuns.unshift({
-	        index: nextIndex,
-	        foreground: savedForeground.publicUrl,
-	        background: savedBackground.publicUrl,
-	        mask: savedMask.publicUrl,
-	        createdAt: new Date().toISOString(),
-	        method: "rembg",
-	      });
-	      await writeHistory(history);
+
+	      if (IS_VERCEL) {
+	        push(
+	          "检测到 Vercel Serverless：文件系统为只读，已跳过写入 public/imgs（如需持久化请接入 Blob/S3/KV）"
+	        );
+	      } else {
+	        const stamp = buildStamp();
+	        const history = await readHistory();
+	        const nextIndex = history.counters.layers + 1;
+	        history.counters.layers = nextIndex;
+	        const savedForeground = await saveDataUrlFile(
+	          foregroundDataUrl,
+	          "layers-foreground",
+	          stamp,
+	          nextIndex
+	        );
+	        const savedBackground = await saveDataUrlFile(
+	          backgroundDataUrl,
+	          "layers-background",
+	          stamp,
+	          nextIndex
+	        );
+	        const savedMask = await saveDataUrlFile(
+	          maskDataUrl,
+	          "layers-mask",
+	          stamp,
+	          nextIndex
+	        );
+	        await updateLatestManifest({
+	          layerForeground: savedForeground.publicUrl,
+	          layerBackground: savedBackground.publicUrl,
+	          layerMask: savedMask.publicUrl,
+	          layerIndex: nextIndex,
+	          layerMethod: "rembg",
+	          layerCount: 2,
+	        });
+	        history.layerRuns.unshift({
+	          index: nextIndex,
+	          foreground: savedForeground.publicUrl,
+	          background: savedBackground.publicUrl,
+	          mask: savedMask.publicUrl,
+	          createdAt: new Date().toISOString(),
+	          method: "rembg",
+	        });
+	        await writeHistory(history);
+	      }
 
 	      const elapsed = Date.now() - startedAt;
 	      push(`全部完成，耗时 ${elapsed}ms`);
@@ -333,32 +363,54 @@ export async function POST(request: NextRequest) {
 	          "LaMa 步骤触发 Replicate 429 限流，将启用降级策略：返回 rembg 前景图 + 原始图像作为背景。"
 	        );
 	        const elapsed = Date.now() - startedAt;
-	        const stamp = buildStamp();
-	        const history = await readHistory();
-	        const nextIndex = history.counters.layers + 1;
-	        history.counters.layers = nextIndex;
-	        const savedForeground = await saveDataUrlFile(foregroundDataUrl, "layers-foreground", stamp, nextIndex);
-	        const savedBackground = await saveDataUrlFile(imageDataUrl, "layers-background", stamp, nextIndex);
-	        const savedMask = await saveDataUrlFile(maskDataUrl, "layers-mask", stamp, nextIndex);
-	        await updateLatestManifest({
-	          layerForeground: savedForeground.publicUrl,
-	          layerBackground: savedBackground.publicUrl,
-	          layerMask: savedMask.publicUrl,
-	          layerIndex: nextIndex,
-	          layerMethod: "rembg",
-	          layerCount: 2,
-	        });
-	        history.layerRuns.unshift({
-	          index: nextIndex,
-	          foreground: savedForeground.publicUrl,
-	          background: savedBackground.publicUrl,
-	          mask: savedMask.publicUrl,
-	          createdAt: new Date().toISOString(),
-	          degraded: true,
-	          degradeReason: "rate_limited_lama_429",
-	          method: "rembg",
-	        });
-	        await writeHistory(history);
+
+	        if (IS_VERCEL) {
+	          push(
+	            "检测到 Vercel Serverless：文件系统为只读，已跳过写入 public/imgs（如需持久化请接入 Blob/S3/KV）"
+	          );
+	        } else {
+	          const stamp = buildStamp();
+	          const history = await readHistory();
+	          const nextIndex = history.counters.layers + 1;
+	          history.counters.layers = nextIndex;
+	          const savedForeground = await saveDataUrlFile(
+	            foregroundDataUrl,
+	            "layers-foreground",
+	            stamp,
+	            nextIndex
+	          );
+	          const savedBackground = await saveDataUrlFile(
+	            imageDataUrl,
+	            "layers-background",
+	            stamp,
+	            nextIndex
+	          );
+	          const savedMask = await saveDataUrlFile(
+	            maskDataUrl,
+	            "layers-mask",
+	            stamp,
+	            nextIndex
+	          );
+	          await updateLatestManifest({
+	            layerForeground: savedForeground.publicUrl,
+	            layerBackground: savedBackground.publicUrl,
+	            layerMask: savedMask.publicUrl,
+	            layerIndex: nextIndex,
+	            layerMethod: "rembg",
+	            layerCount: 2,
+	          });
+	          history.layerRuns.unshift({
+	            index: nextIndex,
+	            foreground: savedForeground.publicUrl,
+	            background: savedBackground.publicUrl,
+	            mask: savedMask.publicUrl,
+	            createdAt: new Date().toISOString(),
+	            degraded: true,
+	            degradeReason: "rate_limited_lama_429",
+	            method: "rembg",
+	          });
+	          await writeHistory(history);
+	        }
 	        push(`降级完成，耗时 ${elapsed}ms`);
 
 	        return NextResponse.json({

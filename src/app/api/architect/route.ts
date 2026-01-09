@@ -7,6 +7,8 @@ export const runtime = "nodejs";
 const FLUX_API_URL =
   "https://api.replicate.com/v1/models/black-forest-labs/flux-1.1-pro/predictions";
 
+const IS_VERCEL = process.env.VERCEL === "1";
+
 const DEFAULT_FLUX_PROMPT =
 	"A vertical street level view of a densely atmospheric cyberpunk city. Neon signs glow wildly, a futuristic car drives on the road, and towering skyscrapers fill the background. The image is rendered in a distinct flat composition style with clear visual layers for foreground, middle ground, and background. High contrast lighting with a synthwave color palette of neon pinks, purples, and blues. Graphic novel aesthetic.";
 
@@ -209,26 +211,35 @@ export async function POST(request: NextRequest) {
     steps.push("开始处理 Architect 请求");
 
     const { imageUrl, dataUrl } = await callFluxArchitect(prompt, steps);
-    const stamp = buildStamp();
-    const history = await readHistory();
-    const nextIndex = history.counters.architect + 1;
-    history.counters.architect = nextIndex;
-    const saved = await saveDataUrlFile(dataUrl, "architect", stamp, nextIndex);
-    await updateLatestManifest({
-      architect: saved.publicUrl,
-      architectFile: saved.fileName,
-      architectPrompt: prompt,
-      architectIndex: nextIndex,
-    });
-    history.architectRuns.unshift({
-      index: nextIndex,
-      fileName: saved.fileName,
-      publicUrl: saved.publicUrl,
-      prompt,
-      createdAt: new Date().toISOString(),
-    });
-    await writeHistory(history);
-    steps.push(`已保存图片: ${saved.fileName}`);
+
+    let saved: { fileName: string; publicUrl: string } | null = null;
+
+    if (IS_VERCEL) {
+      steps.push(
+        "检测到 Vercel Serverless：文件系统为只读，已跳过写入 public/imgs（如需持久化请接入 Blob/S3/KV）"
+      );
+    } else {
+      const stamp = buildStamp();
+      const history = await readHistory();
+      const nextIndex = history.counters.architect + 1;
+      history.counters.architect = nextIndex;
+      saved = await saveDataUrlFile(dataUrl, "architect", stamp, nextIndex);
+      await updateLatestManifest({
+        architect: saved.publicUrl,
+        architectFile: saved.fileName,
+        architectPrompt: prompt,
+        architectIndex: nextIndex,
+      });
+      history.architectRuns.unshift({
+        index: nextIndex,
+        fileName: saved.fileName,
+        publicUrl: saved.publicUrl,
+        prompt,
+        createdAt: new Date().toISOString(),
+      });
+      await writeHistory(history);
+      steps.push(`已保存图片: ${saved.fileName}`);
+    }
 
     return NextResponse.json({
       imageUrl,
