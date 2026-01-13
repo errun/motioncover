@@ -18,6 +18,7 @@ const ROUTES: string[] = [
   "/about",
   "/faq",
   "/charts",
+  "/governors-ball-2026-lineup",
   "/visualizer/cover-25d",
   "/visualizer/architect",
 ];

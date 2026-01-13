@@ -200,6 +200,16 @@ export default async function Home() {
           </section>
 
           <p className="text-[11px] text-zinc-500 text-center">{copy.note}</p>
+          <div className="text-center">
+            <Link
+              href={withLocalePathname("/governors-ball-2026-lineup", locale)}
+              className="text-[10px] text-zinc-600 hover:text-zinc-400 underline decoration-zinc-800 hover:decoration-zinc-600 transition-colors"
+            >
+              {isZh
+                ? "Gov Ball 2026 阵容公布（2026年1月6日）"
+                : "Gov Ball 2026 lineup announcement (Jan 6, 2026)"}
+            </Link>
+          </div>
         </div>
       </main>
       <Footer />
