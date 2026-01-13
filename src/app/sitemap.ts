@@ -19,7 +19,6 @@ const ROUTES: string[] = [
   "/faq",
   "/charts",
   "/visualizer/cover-25d",
-  "/visualizer/effects",
   "/visualizer/architect",
 ];
 
@@ -47,4 +46,3 @@ export default function sitemap(): MetadataRoute.Sitemap {
     };
   });
 }
-

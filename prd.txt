@@ -1,194 +1,245 @@
-这是该项目总结文档的中文翻译版本：
+# MotionCover - 产品需求文档 (PRD)
 
-#Canvas - 项目总结##📊 项目概览**Canvas** 是一个使用现代 Web 技术构建的、可用于生产环境的 Spotify Canvas 下载器。它允许用户通过优雅、极简的界面保存 Spotify 的动态封面艺术（Canvas 视频）。
+## 📊 项目概览
 
-##✨ 关键成就###核心功能实现 ✓* [x] 带有“智能粘贴”按钮的主页
-* [x] 具有 SSR（服务端渲染）的动态单曲结果页
-* [x] 集成 Spotify API 并支持 Cookie 轮询
-* [x] Redis 缓存（24小时 TTL）
-* [x] 自动回退至专辑封面（当无视频时）
-* [x] SEO 优化 (JSON-LD, 元数据, 站点地图)
-* [x] 响应式移动优先设计
-* [x] 强制暗黑模式
-* [x] 错误处理与恢复机制
-* [x] 带骨架屏（Skeleton Screens）的加载状态
-* [x] 分析工具集成
-* [x] 健康检查 API
+**MotionCover** 是一个综合性的音乐可视化工具平台，包含 Spotify Canvas 下载器和多种音乐视觉创作工具。
+项目使用 Next.js 14+ 构建，支持中英文双语，提供从下载到创作的完整工作流。
 
-###质量保证 ✓* [x] 11 个单元测试 (100% 通过)
-* [x] TypeScript 严格模式
-* [x] 生产环境构建已验证
-* [x] 已实现错误边界 (Error Boundaries)
-* [x] 详尽的文档
-
-###性能与安全 ✓* [x] 请求超时设置 (10秒)
-* [x] 带指数退避的重试逻辑
-* [x] 用于应对速率限制的 Cookie 轮询
-* [x] 无状态架构
-* [x] 环境变量验证
-* [x] 缓存统计追踪
-
-##📁 项目结构```
-canvas/
-├── app/
-│   ├── api/health/route.ts          # 健康检查端点
-│   ├── components/
-│   │   ├── skeleton.tsx             # 加载骨架屏
-│   │   └── web-vitals.tsx           # 性能监控
-│   ├── track/[id]/
-│   │   ├── page.tsx                 # 服务端单曲页面
-│   │   ├── track-content.tsx        # 客户端视频显示
-│   │   └── loading.tsx              # 加载状态
-│   ├── error.tsx                    # 错误边界
-│   ├── not-found.tsx                # 404 页面
-│   ├── page.tsx                     # 主页
-│   ├── layout.tsx                   # 根布局
-│   ├── globals.css                  # 全局样式
-│   ├── robots.ts                    # robots.txt
-│   └── sitemap.ts                   # sitemap.xml
-├── lib/
-│   ├── __tests__/
-│   │   ├── spotify.test.ts          # Spotify API 测试
-│   │   └── utils.test.ts            # 工具函数测试
-│   ├── spotify.ts                   # Spotify API 客户端
-│   ├── redis.ts                     # Redis 缓存
-│   ├── utils.ts                     # SEO 工具
-│   ├── logger.ts                    # 日志工具
-│   └── env.ts                       # 环境变量验证
-├── public/                          # 静态资源
-├── .env.example                     # 环境变量模板
-├── package.json                     # 依赖项
-├── tsconfig.json                    # TypeScript 配置
-├── vitest.config.ts                 # 测试配置
-├── next.config.ts                   # Next.js 配置
-├── README.md                        # 主文档
-├── DEPLOYMENT.md                    # 部署指南
-├── CONTRIBUTING.md                  # 贡献指南
-├── CHANGELOG.md                     # 版本历史
-└── PROJECT_SUMMARY.md               # 本文件
-
-```
-
-##🛠 技术栈| 类别 | 技术 |
-| --- | --- |
-| 框架 | Next.js 14+ |
-| 语言 | TypeScript |
-| 样式 | Tailwind CSS |
-| UI 组件 | shadcn/ui + Lucide React |
-| 缓存 | Vercel KV (Redis) |
-| 测试 | Vitest + React Testing Library |
-| 分析 | Vercel Analytics |
-| 部署 | Vercel |
-
-##📈 指标数据| 指标 | 数值 |
-| --- | --- |
-| 创建文件数 | 25+ |
-| 代码行数 | ~1,500 |
-| 测试用例 | 11 |
-| 测试通过率 | 100% |
-| TypeScript 错误 | 0 |
-| 构建时间 | ~3s |
-| 包体积 | 已优化 |
-
-##🚀 就绪部署项目已完全配置好用于生产环境部署：
-
-* ✓ 环境变量已文档化
-* ✓ 健康检查端点
-* ✓ 错误处理与日志记录
-* ✓ 性能监控
-* ✓ SEO 优化
-* ✓ 安全最佳实践
-
-##📚 文档* **README.md**: 完整功能概览与设置指南
-* **DEPLOYMENT.md**: 分步部署说明
-* **CONTRIBUTING.md**: 贡献者指南
-* **CHANGELOG.md**: 版本历史与路线图
-* **PROJECT_SUMMARY.md**: 本文件
-
-##🎯 下一步计划1. **配置凭据**
-* 从网页播放器获取 Spotify Cookie
-* 设置 Vercel KV 数据库
-* 配置环境变量
-
-
-2. **部署到 Vercel**
-* 推送到 GitHub
-* 连接到 Vercel
-* 设置环境变量
-* 部署
-
-
-3. **监控与优化**
-* 检查健康端点
-* 监控分析数据
-* 追踪缓存统计
-* 基于指标进行优化
-
-
-
-##💡 设计理念**"It just works" (它就是好用)** - 应用程序遵循乔布斯的设计理念：
-
-* 极简界面
-* 直观交互
-* 优雅视觉设计
-* 无缝用户体验
-* 聚焦内容（视频）
-
-##🔐 安全特性* Cookie 轮询防止速率限制
-* 无状态架构（不存储用户数据）
-* 环境变量验证
-* 错误边界防止崩溃
-* 生产环境强制 HTTPS
-* 超时保护 (10秒)
-
-##📊 性能特性* 边缘缓存 (24小时 TTL)
-* 请求超时 (10秒)
-* 带退避的重试逻辑
-* 懒加载
-* 代码分割
-* 图片优化
-
-##🎨 设计系统* **颜色**: 黑色 (#000000), 绿色 (#1DB954), 灰色 (#64748b)
-* **排版**: 响应式缩放
-* **间距**: 统一的内边距/外边距
-* **交互**: 平滑过渡
-* **无障碍**: ARIA 标签，语义化 HTML
-
-##📱 响应式设计* 移动优先策略
-* 响应式排版
-* 触控友好的按钮
-* 图片优化
-* 安全区域支持
-
-##🧪 测试覆盖率* URL 解析 (7个测试)
-* 元数据生成 (4个测试)
-* 边缘情况与错误场景
-* 100% 测试通过率
-
-##🎓 学习资源该代码库展示了：
-
-* Next.js App Router 最佳实践
-* TypeScript 严格模式
-* React Hooks 与状态管理
-* API 集成模式
-* 错误处理策略
-* 测试最佳实践
-* SEO 优化
-* 性能优化
-
-##📞 支持如有问题或疑问：
-
-1. 查看文档
-2. 查阅现有 Issue
-3. 提交带有详细信息的新 Issue
-4. 遵循贡献指南
-
-##📄 许可MIT License - 免费用于个人及商业用途
+**网站**: https://www.motioncover.app
 
 ---
 
-**项目状态**: ✅ 完成且可用于生产环境
+## 🎯 核心功能模块
 
-**最后更新**: 2025-12-15
+### 模块 1: Spotify Canvas 下载器 (`/downloader`)
+**状态**: ✅ 已完成
 
-**版本**: 1.0.0
+- 粘贴 Spotify 歌曲链接，预览并下载 Canvas 视频
+- 支持搜索歌曲/艺术家
+- 自动回退至专辑封面（当无 Canvas 时）
+- Redis 缓存（24小时 TTL）
+- Cookie 轮询防止速率限制
+
+### 模块 2: 音频驱动特效 (`/visualizer/effects`)
+**状态**: 🗑️ 已移除（访问将重定向至 `/visualizer/cover-25d`）
+
+### 模块 3: 2.5D 视差封面 (`/visualizer/cover-25d`)
+**状态**: ✅ 已完成
+
+- 上传封面图片，自动生成深度图
+- 生成前景/背景分层
+- 音频驱动的 2.5D 视差动效
+- 支持导出动画
+
+### 模块 4: AI 分层实验室 (`/visualizer/architect`)
+**状态**: ✅ 已完成
+
+- AI 生成构图清晰的底图（基于 Prompt）
+- 智能分层（前景/背景分离）
+- 多层动画预览
+- 速度粒子效果
+
+### 模块 5: Spotify Canvas Studio (`/studio`)
+**状态**: 🔄 UI 已完成，核心处理待实现
+
+- **The Resizer**: 上传视频/图片，转换为 9:16 Canvas 格式
+  - Fit/Fill 模式切换
+  - 时长控制（3-8秒）
+  - 手机预览框
+- **The Maker**: 上传专辑封面 + 选择动画模板
+  - 5 种预设模板（Rain, Neon, Vinyl, Abstract, Particles）
+  - 实时预览
+- 邮件收集 + 导出流程（UI 已完成）
+
+---
+
+## 🛠 技术栈
+
+| 类别 | 技术 |
+|------|------|
+| 框架 | Next.js 14+ (App Router) |
+| 语言 | TypeScript (严格模式) |
+| 样式 | Tailwind CSS |
+| UI 组件 | Lucide React Icons |
+| 3D/动画 | Three.js + React Three Fiber + Drei |
+| 状态管理 | Zustand |
+| 缓存 | Vercel KV (Redis) |
+| 国际化 | 自定义 i18n (中/英) |
+| 部署 | Vercel |
+
+---
+
+## 📱 页面路由清单
+
+| 路由 | 功能 | 状态 |
+|------|------|------|
+| `/` | 首页 - 工具入口 | ✅ |
+| `/downloader` | Canvas 下载器 | ✅ |
+| `/canvas` | Canvas 结果页 | ✅ |
+| `/search` | 搜索结果 | ✅ |
+| `/artist/[id]` | 艺术家页面 | ✅ |
+| `/charts` | 热门歌曲 | ✅ |
+| `/random` | 随机 Canvas | ✅ |
+| `/studio` | Canvas Studio | 🔄 |
+| `/visualizer` | 可视化入口 | ✅ |
+| `/visualizer/effects` | 音频特效（已移除，重定向至 `/visualizer/cover-25d`） | 🗑️ |
+| `/visualizer/cover-25d` | 2.5D 视差 | ✅ |
+| `/visualizer/architect` | AI 分层 | ✅ |
+| `/visualizer/parallax` | 视差效果 | ✅ |
+| `/visualizer/cockpit` | 驾驶舱视角 | ✅ |
+| `/spotify-canvas` | Canvas 指南 | ✅ |
+| `/spotify-canvas/dimensions` | 尺寸规范 | ✅ |
+| `/spotify-canvas/length` | 时长说明 | ✅ |
+| `/spotify-canvas/maker` | 制作教程 | ✅ |
+| `/spotify-canvas/download` | 下载教程 | ✅ |
+| `/about` | 关于 | ✅ |
+| `/faq` | 常见问题 | ✅ |
+
+---
+
+## 🌐 API 端点
+
+| 端点 | 方法 | 功能 |
+|------|------|------|
+| `/api/canvas` | GET | 获取 Canvas 数据 |
+| `/api/search` | GET | 搜索歌曲/艺术家 |
+| `/api/artist/[id]` | GET | 获取艺术家信息 |
+| `/api/parse-canvas` | POST | 解析 Canvas URL |
+| `/api/depth` | POST | 生成深度图 |
+| `/api/layers` | POST | 图片分层 |
+| `/api/architect` | POST | AI 图片生成 |
+| `/api/health` | GET | 健康检查 |
+
+---
+
+## 🎨 设计系统
+
+### 颜色
+- 主背景: `#000000` / `#121212`
+- 次背景: `#181818`
+- 主绿色: `#1DB954` (Spotify Green)
+- 文字: `#FFFFFF` / `#64748b`
+
+### 主题
+- 强制暗黑模式
+- Spotify 风格设计语言
+- 响应式布局（移动优先）
+
+---
+
+## 🔐 安全与性能
+
+### 安全
+- Cookie 轮询防止 API 速率限制
+- 无用户数据存储（无状态）
+- 环境变量验证
+- 错误边界防止崩溃
+- HTTPS 强制
+
+### 性能
+- Redis 缓存（24小时 TTL）
+- 请求超时（10秒）
+- 带退避的重试逻辑
+- 代码分割
+- 图片优化
+
+
+---
+
+## 📁 项目结构
+
+```
+motioncover/
+├── src/
+│   ├── app/                          # Next.js App Router
+│   │   ├── page.tsx                  # 首页（工具入口）
+│   │   ├── downloader/               # Canvas 下载器
+│   │   ├── canvas/                   # Canvas 结果页
+│   │   ├── search/                   # 搜索结果页
+│   │   ├── artist/[id]/              # 艺术家页面
+│   │   ├── charts/                   # 热门歌曲
+│   │   ├── random/                   # 随机 Canvas
+│   │   ├── studio/                   # Canvas Studio
+│   │   ├── visualizer/
+│   │   │   ├── effects/              # 音频特效预览
+│   │   │   ├── cover-25d/            # 2.5D 视差
+│   │   │   ├── architect/            # AI 分层实验室
+│   │   │   ├── parallax/             # 视差效果
+│   │   │   └── cockpit/              # 驾驶舱视角
+│   │   ├── spotify-canvas/           # Canvas 指南
+│   │   │   ├── dimensions/           # 尺寸规范
+│   │   │   ├── length/               # 时长说明
+│   │   │   ├── maker/                # 制作教程
+│   │   │   └── download/             # 下载教程
+│   │   ├── about/                    # 关于页面
+│   │   ├── faq/                      # 常见问题
+│   │   └── api/
+│   │       ├── canvas/               # Canvas 数据 API
+│   │       ├── search/               # 搜索 API
+│   │       ├── artist/[id]/          # 艺术家 API
+│   │       ├── depth/                # 深度图生成 API
+│   │       ├── layers/               # 分层 API
+│   │       ├── architect/            # AI 生成 API
+│   │       ├── parse-canvas/         # Canvas 解析
+│   │       └── health/               # 健康检查
+│   ├── components/                   # 共享组件
+│   │   ├── Header.tsx
+│   │   ├── Footer.tsx
+│   │   ├── SearchBox.tsx
+│   │   └── Skeleton.tsx
+│   ├── features/                     # 功能模块
+│   │   ├── audio/                    # 音频分析
+│   │   ├── canvas-downloader/        # 下载器核心
+│   │   ├── parallax/                 # 视差效果
+│   │   ├── spotify-core/             # Spotify 核心
+│   │   └── visualizer/               # 可视化组件
+│   ├── lib/                          # 工具库
+│   │   ├── redis.ts                  # Redis 缓存
+│   │   ├── logger.ts                 # 日志
+│   │   ├── env.ts                    # 环境变量
+│   │   └── utils.ts                  # 通用工具
+│   ├── i18n/                         # 国际化
+│   │   ├── messages.ts
+│   │   ├── routing.ts
+│   │   └── server.ts
+│   ├── services/                     # 服务层
+│   └── types/                        # 类型定义
+├── public/                           # 静态资源
+├── package.json
+├── tsconfig.json
+├── next.config.ts
+└── tailwind.config.ts
+```
+
+---
+
+## 📋 待完成任务
+
+### 高优先级
+1. [ ] `/studio` - 实现实际的视频处理逻辑（FFmpeg/WebCodecs）
+2. [ ] `/studio` - 实现邮件发送功能
+3. [ ] 添加更多动画模板
+
+### 中优先级
+4. [ ] 批量下载功能
+5. [ ] 用户收藏列表（本地存储）
+6. [ ] 更多后期效果（Glitch, Bloom, etc.）
+
+### 低优先级
+7. [ ] 社交分享功能
+8. [ ] PWA 支持
+9. [ ] 更多语言支持
+
+---
+
+## 📄 许可
+
+MIT License - 免费用于个人及商业用途
+
+---
+
+**项目状态**: ✅ 生产环境可用（部分功能开发中）
+
+**最后更新**: 2026-01-12
+
+**版本**: 2.0.0

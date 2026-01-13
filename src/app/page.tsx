@@ -64,16 +64,6 @@ export default async function Home() {
           {
             id: "tool-2",
             pill: "功能 2",
-            pillText: "音频 Shader / 特效预览",
-            title: "音频驱动 Shader 与粒子特效",
-            desc: "预览基于节奏的粒子、火焰、发光、烟雾等效果，并测试 VHS 等后期效果。",
-            href: "/visualizer/effects",
-            accent: "purple",
-            cta: "进入效果面板",
-          },
-          {
-            id: "tool-3",
-            pill: "功能 3",
             pillText: "封面 2.5D 视差",
             title: "封面分层 + 2.5D 视差动效",
             desc: "上传封面与音频，生成 2.5D 视差动效，适合 Motion Cover / Canvas 展示。",
@@ -82,8 +72,8 @@ export default async function Home() {
             cta: "进入 2.5D 工作台",
           },
           {
-            id: "tool-4",
-            pill: "功能 4",
+            id: "tool-3",
+            pill: "功能 3",
             pillText: "AI 分层实验室",
             title: "AI 底图生成 + 智能分层",
             desc: "生成构图清晰的底图，再进行分层与补全，为复杂 Motion Cover 打基础。",
@@ -106,16 +96,6 @@ export default async function Home() {
           {
             id: "tool-2",
             pill: "TOOL 2",
-            pillText: "Audio Shader / Effects",
-            title: "Audio-reactive shaders & particles",
-            desc: "Preview beat-driven particles, fire, glow, smoke, and post effects like VHS.",
-            href: "/visualizer/effects",
-            accent: "purple",
-            cta: "Open Effects",
-          },
-          {
-            id: "tool-3",
-            pill: "TOOL 3",
             pillText: "Cover 2.5D Parallax",
             title: "Layered covers with parallax motion",
             desc: "Upload cover + audio to generate 2.5D parallax motion for Motion Covers.",
@@ -124,8 +104,8 @@ export default async function Home() {
             cta: "Open 2.5D Studio",
           },
           {
-            id: "tool-4",
-            pill: "TOOL 4",
+            id: "tool-3",
+            pill: "TOOL 3",
             pillText: "AI Layer Lab",
             title: "AI background + smart layering",
             desc: "Generate clean compositions and split layers for complex motion designs.",
@@ -182,7 +162,7 @@ export default async function Home() {
             <p className="text-sm sm:text-base text-zinc-400">{copy.subtitle}</p>
           </header>
 
-          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {copy.cards.map((card) => {
               const styles = accentToClasses(card.accent);
               return (
