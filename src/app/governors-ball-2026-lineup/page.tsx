@@ -104,16 +104,34 @@ export async function generateMetadata(): Promise<Metadata> {
 
   const title = isZh
     ? "Gov Ball 2026 阵容公布（2026年1月6日）"
-    : "Governors Ball (Gov Ball) 2026 Lineup Announced (Jan 6, 2026)";
+    : "Gov Ball 2026 lineup (Governors Ball) — announced Jan 6, 2026";
   const description = isZh
     ? "2026年1月6日，纽约标志性音乐节 Governors Ball（Gov Ball）正式公布 2026 阵容。本文按周五/周六/周日列出完整名单，并整理分日/时间表关注点，以及用播放列表快速跟进的清单。"
-    : "On Jan 6, 2026, New York's iconic Governors Ball (Gov Ball) officially announced the 2026 lineup. This page lists the artists by day (Fri/Sat/Sun) plus a quick checklist for day splits, set times, and playlists.";
+    : "Gov Ball 2026 lineup announced Jan 6, 2026: full artist list by day (Fri/Sat/Sun), plus a quick checklist for day splits, set times, and playlists.";
 
   const canonical = `${baseUrl}${withLocalePathname(pathname, locale)}`;
+  const posterAlt = isZh
+    ? "Gov Ball 2026 官方阵容海报缩略图"
+    : "Gov Ball 2026 official lineup poster thumbnail";
 
   return {
     title,
     description,
+    keywords: isZh
+      ? [
+          "Gov Ball 2026",
+          "Gov Ball 2026 阵容",
+          "Governors Ball 2026",
+          "Gov Ball lineup",
+          "Governors Ball lineup",
+        ]
+      : [
+          "Gov Ball 2026",
+          "Gov Ball 2026 lineup",
+          "Governors Ball 2026 lineup",
+          "Gov Ball lineup",
+          "Governors Ball lineup",
+        ],
     alternates: {
       canonical,
       languages: {
@@ -128,6 +146,20 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: "MotionCover",
       type: "article",
       publishedTime: `${publishedDate}T00:00:00.000Z`,
+      images: [
+        {
+          url: govBallPoster.src,
+          width: govBallPoster.width,
+          height: govBallPoster.height,
+          alt: posterAlt,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [govBallPoster.src],
     },
   };
 }
