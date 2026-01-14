@@ -10,6 +10,53 @@ import { useVisualizerStore } from "@/features/visualizer";
 
 // 双层 WebGL Animator：前景 + 背景两个平面，基于音频驱动的 Shader 光影
 
+type Vec3 = [number, number, number];
+type ForegroundPivot = "center" | "bottom-center";
+
+type ForegroundMeshTransform = {
+  position: Vec3;
+  scale: Vec3;
+  renderOrder: number;
+};
+
+type ForegroundMeshTransformInput = {
+  baseScale: Vec3;
+  pivot: ForegroundPivot;
+  scaleMultiplier: number;
+  zOffset: number;
+  renderOrder: number;
+  anchorHeight?: number;
+};
+
+function getForegroundMeshTransform({
+  baseScale,
+  pivot,
+  scaleMultiplier,
+  zOffset,
+  renderOrder,
+  anchorHeight,
+}: ForegroundMeshTransformInput): ForegroundMeshTransform {
+  const anchorY =
+    pivot === "bottom-center" ? -((anchorHeight ?? baseScale[1]) / 2) : 0;
+
+  return {
+    position: [0, anchorY, zOffset],
+    scale: [baseScale[0] * scaleMultiplier, baseScale[1] * scaleMultiplier, 1],
+    renderOrder,
+  };
+}
+
+function getPlaneScale(texture: THREE.Texture, viewport: { width: number; height: number }): Vec3 {
+  const image = texture.image as { width: number; height: number } | undefined;
+  if (!image) return [1, 1, 1];
+  const imageAspect = image.width / image.height;
+  const viewportAspect = viewport.width / viewport.height;
+  if (imageAspect > viewportAspect) {
+    return [viewport.width, viewport.width / imageAspect, 1];
+  }
+  return [viewport.height * imageAspect, viewport.height, 1];
+}
+
 const vertexShader = `
   varying vec2 vUv;
   void main() {
@@ -84,6 +131,10 @@ export interface LayeredAnimatorProps {
   debugSolidBackground?: boolean;
   showForeground?: boolean;
   debugPlainMaterials?: boolean;
+  foregroundScaleMultiplier?: number;
+  foregroundZOffset?: number;
+  foregroundPivot?: ForegroundPivot;
+  foregroundRenderOrder?: number;
 }
 
 export function LayeredAnimator({
@@ -92,6 +143,10 @@ export function LayeredAnimator({
   debugSolidBackground = false,
   showForeground = true,
   debugPlainMaterials = false,
+  foregroundScaleMultiplier,
+  foregroundZOffset,
+  foregroundPivot = "center",
+  foregroundRenderOrder,
 }: LayeredAnimatorProps) {
   const bgTex = useTexture(backgroundUrl);
   const fgTex = useTexture(foregroundUrl);
@@ -151,22 +206,59 @@ export function LayeredAnimator({
     [fgTex]
   );
 
-  const baseScale = useMemo(() => {
-    const image = bgTex.image as { width: number; height: number } | undefined;
-    if (!image) return [1, 1, 1] as [number, number, number];
-    const imageAspect = image.width / image.height;
-    const viewportAspect = viewport.width / viewport.height;
-    if (imageAspect > viewportAspect) {
-      return [viewport.width, viewport.width / imageAspect, 1] as [number, number, number];
-    }
-    return [viewport.height * imageAspect, viewport.height, 1] as [number, number, number];
-  }, [bgTex, viewport.width, viewport.height]);
+  const bgBaseScale = useMemo(
+    () => getPlaneScale(bgTex, viewport),
+    [bgTex, viewport.width, viewport.height]
+  );
+
+  const fgBaseScale = useMemo(
+    () => getPlaneScale(fgTex, viewport),
+    [fgTex, viewport.width, viewport.height]
+  );
 
   const bgScale: [number, number, number] = [
-    baseScale[0] * 1.02,
-    baseScale[1] * 1.02,
+    bgBaseScale[0] * 1.02,
+    bgBaseScale[1] * 1.02,
     1,
   ];
+
+  const fgScaleMultiplierRaw =
+    foregroundScaleMultiplier ?? (foregroundPivot === "bottom-center" ? 1.18 : 1);
+  const fgScaleMultiplier =
+    foregroundPivot === "bottom-center"
+      ? THREE.MathUtils.clamp(fgScaleMultiplierRaw, 1.15, 1.2)
+      : fgScaleMultiplierRaw;
+
+  const fgZOffset =
+    foregroundZOffset ?? (foregroundPivot === "bottom-center" ? 0.05 : 0);
+
+  const fgOrder = foregroundRenderOrder ?? 1;
+
+  const fgTransform = useMemo(
+    () =>
+      getForegroundMeshTransform({
+        baseScale: fgBaseScale,
+        anchorHeight: bgBaseScale[1],
+        pivot: foregroundPivot,
+        scaleMultiplier: fgScaleMultiplier,
+        zOffset: fgZOffset,
+        renderOrder: fgOrder,
+      }),
+    [
+      fgBaseScale,
+      bgBaseScale,
+      foregroundPivot,
+      fgScaleMultiplier,
+      fgZOffset,
+      fgOrder,
+    ]
+  );
+
+  const fgBottomCenterGeometry = useMemo(() => {
+    const geometry = new THREE.PlaneGeometry(1, 1);
+    geometry.translate(0, 0.5, 0);
+    return geometry;
+  }, []);
 
   useFrame((state) => {
     const bgMat = bgMatRef.current;
@@ -227,16 +319,32 @@ export function LayeredAnimator({
         </mesh>
       )}
 
-      {/* 前景层：稍近、略小 */}
+      {/* 前景层：稍近、放大、底部为 pivot */}
       {showForeground && (
         debugPlainMaterials ? (
-          <mesh position={[0, 0, 0]} scale={baseScale} renderOrder={1}>
-            <planeGeometry args={[1, 1]} />
+          <mesh
+            position={fgTransform.position}
+            scale={fgTransform.scale}
+            renderOrder={fgTransform.renderOrder}
+          >
+            {foregroundPivot === "bottom-center" ? (
+              <primitive object={fgBottomCenterGeometry} attach="geometry" />
+            ) : (
+              <planeGeometry args={[1, 1]} />
+            )}
             <meshBasicMaterial map={fgTex} transparent />
           </mesh>
         ) : (
-          <mesh position={[0, 0, 0]} scale={baseScale} renderOrder={1}>
-            <planeGeometry args={[1, 1]} />
+          <mesh
+            position={fgTransform.position}
+            scale={fgTransform.scale}
+            renderOrder={fgTransform.renderOrder}
+          >
+            {foregroundPivot === "bottom-center" ? (
+              <primitive object={fgBottomCenterGeometry} attach="geometry" />
+            ) : (
+              <planeGeometry args={[1, 1]} />
+            )}
             <shaderMaterial
               ref={fgMatRef}
               vertexShader={vertexShader}

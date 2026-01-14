@@ -647,6 +647,10 @@ export default function ArchitectPage() {
                       debugSolidBackground={debugSolidBackground}
                       showForeground={showForeground}
                       debugPlainMaterials={debugPlainMaterials}
+                      foregroundPivot="bottom-center"
+                      foregroundScaleMultiplier={1.18}
+                      foregroundZOffset={0.05}
+                      foregroundRenderOrder={10}
                     />
                   </Suspense>
                 </Canvas>
