@@ -24,6 +24,7 @@ type ForegroundMeshTransformInput = {
   pivot: ForegroundPivot;
   scaleMultiplier: number;
   zOffset: number;
+  yOffset: number;
   renderOrder: number;
   anchorHeight?: number;
 };
@@ -33,6 +34,7 @@ function getForegroundMeshTransform({
   pivot,
   scaleMultiplier,
   zOffset,
+  yOffset,
   renderOrder,
   anchorHeight,
 }: ForegroundMeshTransformInput): ForegroundMeshTransform {
@@ -40,7 +42,7 @@ function getForegroundMeshTransform({
     pivot === "bottom-center" ? -((anchorHeight ?? baseScale[1]) / 2) : 0;
 
   return {
-    position: [0, anchorY, zOffset],
+    position: [0, anchorY + yOffset, zOffset],
     scale: [baseScale[0] * scaleMultiplier, baseScale[1] * scaleMultiplier, 1],
     renderOrder,
   };
@@ -133,6 +135,7 @@ export interface LayeredAnimatorProps {
   debugPlainMaterials?: boolean;
   foregroundScaleMultiplier?: number;
   foregroundZOffset?: number;
+  foregroundPixelYOffset?: number;
   foregroundPivot?: ForegroundPivot;
   foregroundRenderOrder?: number;
 }
@@ -145,6 +148,7 @@ export function LayeredAnimator({
   debugPlainMaterials = false,
   foregroundScaleMultiplier,
   foregroundZOffset,
+  foregroundPixelYOffset,
   foregroundPivot = "center",
   foregroundRenderOrder,
 }: LayeredAnimatorProps) {
@@ -152,7 +156,7 @@ export function LayeredAnimator({
   const fgTex = useTexture(foregroundUrl);
   const bgMatRef = useRef<THREE.ShaderMaterial | null>(null);
   const fgMatRef = useRef<THREE.ShaderMaterial | null>(null);
-  const { viewport, gl } = useThree();
+  const { viewport, size, gl } = useThree();
   const { audioReactive, audioIntensity } = useParallaxStore();
   const { bassEnergy: rawBass, midEnergy: rawMid, highEnergy: rawHigh, isPlaying } = useAudioStore();
   const { bassEnabled, midEnabled, highEnabled } = useVisualizerStore();
@@ -235,15 +239,20 @@ export function LayeredAnimator({
   const fgOrder = foregroundRenderOrder ?? 1;
 
   const fgTransform = useMemo(
-    () =>
-      getForegroundMeshTransform({
+    () => {
+      const pixelsToWorldY = size.height > 0 ? viewport.height / size.height : 0;
+      const yOffset = (foregroundPixelYOffset ?? 0) * pixelsToWorldY;
+
+      return getForegroundMeshTransform({
         baseScale: fgBaseScale,
         anchorHeight: bgBaseScale[1],
         pivot: foregroundPivot,
         scaleMultiplier: fgScaleMultiplier,
         zOffset: fgZOffset,
+        yOffset,
         renderOrder: fgOrder,
-      }),
+      });
+    },
     [
       fgBaseScale,
       bgBaseScale,
@@ -251,6 +260,9 @@ export function LayeredAnimator({
       fgScaleMultiplier,
       fgZOffset,
       fgOrder,
+      foregroundPixelYOffset,
+      viewport.height,
+      size.height,
     ]
   );
 

@@ -649,6 +649,7 @@ export default function ArchitectPage() {
                       debugPlainMaterials={debugPlainMaterials}
                       foregroundPivot="center"
                       foregroundScaleMultiplier={1.1}
+                      foregroundPixelYOffset={10}
                       foregroundZOffset={0.05}
                       foregroundRenderOrder={10}
                     />
