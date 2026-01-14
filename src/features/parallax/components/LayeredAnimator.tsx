@@ -319,7 +319,7 @@ export function LayeredAnimator({
         </mesh>
       )}
 
-      {/* 前景层：稍近、放大、底部为 pivot */}
+      {/* 前景层：稍近、可缩放 */}
       {showForeground && (
         debugPlainMaterials ? (
           <mesh

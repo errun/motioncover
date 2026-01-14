@@ -647,8 +647,8 @@ export default function ArchitectPage() {
                       debugSolidBackground={debugSolidBackground}
                       showForeground={showForeground}
                       debugPlainMaterials={debugPlainMaterials}
-                      foregroundPivot="bottom-center"
-                      foregroundScaleMultiplier={1.18}
+                      foregroundPivot="center"
+                      foregroundScaleMultiplier={1.1}
                       foregroundZOffset={0.05}
                       foregroundRenderOrder={10}
                     />
