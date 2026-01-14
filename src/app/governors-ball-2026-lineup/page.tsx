@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { getRequestLocale } from "@/i18n/server";
 import { withLocalePathname } from "@/i18n/routing";
+import govBallPoster from "../../../govball-2026-lineup.png";
 
 const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.motioncover.app";
 const pathname = "/governors-ball-2026-lineup";
@@ -194,6 +196,37 @@ export default async function GovernorsBall2026LineupPage() {
           {heading}
         </h1>
         <p className="text-white/70 text-center max-w-2xl mx-auto">{subtitle}</p>
+
+        <figure className="mt-6">
+          <a
+            href={officialLineupUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="block mx-auto max-w-sm"
+          >
+            <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-white/10 bg-[#0b0b0b]">
+              <Image
+                src={govBallPoster}
+                alt={
+                  isZh
+                    ? "Gov Ball 2026 官方阵容海报缩略图"
+                    : "Gov Ball 2026 official lineup poster thumbnail"
+                }
+                fill
+                priority
+                placeholder="blur"
+                className="object-cover"
+                sizes="(max-width: 640px) 100vw, 384px"
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-black/0 to-black/40 pointer-events-none" />
+            </div>
+          </a>
+          <figcaption className="mt-2 text-xs text-white/50 text-center">
+            {isZh
+              ? "海报来自官方发布（点击打开官方阵容页）"
+              : "Poster from the official announcement (click to open the official lineup page)"}
+          </figcaption>
+        </figure>
 
         <div className="mt-8 bg-[#121212] rounded-xl p-6 border border-white/10">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
