@@ -8,6 +8,93 @@ import { withLocalePathname } from "@/i18n/routing";
 const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.motioncover.app";
 const pathname = "/governors-ball-2026-lineup";
 const publishedDate = "2026-01-06";
+const officialLineupUrl = "https://www.governorsballmusicfestival.com/lineup";
+
+type DayLineup = {
+  day: "Friday" | "Saturday" | "Sunday";
+  date: string;
+  headliners: string[];
+  artists: string[];
+};
+
+const GOV_BALL_2026_LINEUP: DayLineup[] = [
+  {
+    day: "Friday",
+    date: "2026-06-05",
+    headliners: ["Lorde", "Baby Keem"],
+    artists: [
+      "Katseye",
+      "Pierce The Veil",
+      "Mariah The Scientist",
+      "The Dare",
+      "2hollis",
+      "King Princess",
+      "Flipturn",
+      "Audrey Hobert",
+      "Turnover",
+      "The Beths",
+      "Arcy Drive",
+      "Confidence Man",
+      "Absolutely",
+      "Whatmore",
+      "Old Mervs",
+      "The Backfires",
+      "School of Rock Queens",
+      "Kids Rock for Kids",
+    ],
+  },
+  {
+    day: "Saturday",
+    date: "2026-06-06",
+    headliners: ["Stray Kids", "Kali Uchis"],
+    artists: [
+      "Major Lazer",
+      "Blood Orange",
+      "Wet Leg",
+      "Amyl and The Sniffers",
+      "Ravyn Lenae",
+      "Snow Strippers",
+      "Del Water Gap",
+      "Thee Sacred Souls",
+      "Spacey Jane",
+      "Jane Remover",
+      "Wisp",
+      "Midnight Generation",
+      "Flowerovlove",
+      "Radio Free Alice",
+      "Villanelle",
+      "Chanpan",
+      "Jade Lemac",
+      "Jimmyboy",
+    ],
+  },
+  {
+    day: "Sunday",
+    date: "2026-06-07",
+    headliners: ["A$AP Rocky", "Jennie"],
+    artists: [
+      "Dominic Fike",
+      "Geese",
+      "Clipse",
+      "Freddie Gibbs",
+      "Alchemist",
+      "Japanese Breakfast",
+      "Hot Mulligan",
+      "Holly Humberstone",
+      "Fcukers",
+      "Rachel Chinouriri",
+      "Khamari",
+      "Between Friends",
+      "Slayyyter",
+      "Hemlocke Springs",
+      "Lexa Gates",
+      "Evening Elephants",
+      "After",
+      "Hannah Jadagu",
+      "School of Rock New York",
+    ],
+  },
+];
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getRequestLocale();
@@ -17,8 +104,8 @@ export async function generateMetadata(): Promise<Metadata> {
     ? "Gov Ball 2026 阵容公布（2026年1月6日）"
     : "Governors Ball (Gov Ball) 2026 Lineup Announced (Jan 6, 2026)";
   const description = isZh
-    ? "2026年1月6日，纽约标志性音乐节 Governors Ball（Gov Ball）正式公布 2026 阵容。本文整理查看入口、分日/时间表关注点，以及用播放列表快速跟进的清单。"
-    : "On Jan 6, 2026, New York's iconic Governors Ball (Gov Ball) officially announced the 2026 lineup. This page lists what to look for (day splits / set times) and a simple playlist checklist.";
+    ? "2026年1月6日，纽约标志性音乐节 Governors Ball（Gov Ball）正式公布 2026 阵容。本文按周五/周六/周日列出完整名单，并整理分日/时间表关注点，以及用播放列表快速跟进的清单。"
+    : "On Jan 6, 2026, New York's iconic Governors Ball (Gov Ball) officially announced the 2026 lineup. This page lists the artists by day (Fri/Sat/Sun) plus a quick checklist for day splits, set times, and playlists.";
 
   const canonical = `${baseUrl}${withLocalePathname(pathname, locale)}`;
 
@@ -46,6 +133,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function GovernorsBall2026LineupPage() {
   const locale = await getRequestLocale();
   const isZh = locale === "zh";
+  const dayLabelZh = { Friday: "周五", Saturday: "周六", Sunday: "周日" } as const;
 
   const heading = isZh
     ? "Gov Ball 2026 阵容正式公布"
@@ -135,6 +223,61 @@ export default async function GovernorsBall2026LineupPage() {
           </div>
         </div>
 
+        <section className="mt-8 space-y-4">
+          <div className="flex items-baseline justify-between gap-4 flex-wrap">
+            <h2 className="text-xl font-semibold text-white">
+              {isZh ? "2026 阵容（按天）" : "2026 lineup (by day)"}
+            </h2>
+            <a
+              href={officialLineupUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-white/60 hover:text-white underline decoration-white/20 hover:decoration-white/60 transition-colors"
+            >
+              {isZh ? "来源：Gov Ball 官方阵容页" : "Source: official lineup page"}
+            </a>
+          </div>
+
+          <div className="space-y-4">
+            {GOV_BALL_2026_LINEUP.map((day) => (
+              <div
+                key={day.day}
+                className="bg-[#181818] rounded-xl p-6 border border-white/10"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2">
+                  <h3 className="text-lg font-semibold text-white">
+                    {isZh ? `${dayLabelZh[day.day]}（${day.day}）` : day.day}
+                  </h3>
+                  <p className="text-xs text-white/50">
+                    {isZh ? "日期" : "Date"}: {day.date}
+                  </p>
+                </div>
+
+                <p className="mt-2 text-base font-semibold text-white">
+                  {day.headliners.join(" • ")}
+                </p>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {day.artists.map((name) => (
+                    <span
+                      key={name}
+                      className="text-xs text-white/70 bg-white/5 border border-white/10 rounded-full px-2 py-1"
+                    >
+                      {name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <p className="text-xs text-white/50 leading-relaxed">
+            {isZh
+              ? "注：以上为依据官方海报/阵容页整理的文本参考，如有变更请以官方内容为准。"
+              : "Note: This is a text transcription of the official poster/page for reference. Always rely on official sources for updates."}
+          </p>
+        </section>
+
         <section className="mt-8 space-y-3 text-white/70 leading-relaxed">
           <h2 className="text-xl font-semibold text-white">
             {isZh ? "快速清单" : "Quick checklist"}
@@ -175,4 +318,3 @@ export default async function GovernorsBall2026LineupPage() {
     </div>
   );
 }
-
