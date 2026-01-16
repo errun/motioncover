@@ -71,6 +71,17 @@ export default async function Home() {
             accent: "sky",
             cta: "进入实验室",
           },
+          {
+            id: "tool-5",
+            pill: "FEATURE 5",
+            pillText: "MusicLed",
+            title: "Audio to video export",
+            desc: "Tune audio mapping and export a rendered cover video.",
+            href: "/visualizer/cover-led",
+            accent: "sky",
+            cta: "Open MusicLed",
+          },
+
         ]
       : [
           {
@@ -93,6 +104,17 @@ export default async function Home() {
             accent: "sky",
             cta: "Open Lab",
           },
+          {
+            id: "tool-5",
+            pill: "TOOL 5",
+            pillText: "MusicLed",
+            title: "Audio to video export",
+            desc: "Tune audio mapping and export a rendered cover video.",
+            href: "/visualizer/cover-led",
+            accent: "sky",
+            cta: "Open MusicLed",
+          },
+
         ],
     note: isZh
       ? "提示：建议桌面端 Chrome / Edge 访问以获得最佳体验。"

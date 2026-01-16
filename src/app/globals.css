@@ -223,3 +223,111 @@ body::before {
 .glow-effect {
   animation: pulse-glow 2s ease-in-out infinite;
 }
+
+/* Cover LED tool */
+.led-panel {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(71, 85, 105, 0.4);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.led-title {
+  font-size: 0.95rem;
+  color: #cbd5f5;
+  margin-bottom: 12px;
+}
+
+.led-upload {
+  border: 1px dashed rgba(148, 163, 184, 0.6);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: 0.2s ease;
+  color: #94a3b8;
+}
+
+.led-upload.is-drag-over {
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  color: #e2e8f0;
+}
+
+.led-upload input[type="file"] {
+  display: none;
+}
+
+.led-upload label {
+  cursor: pointer;
+  display: block;
+}
+
+.led-button {
+  background: #334155;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  transition: 0.2s ease;
+}
+
+.led-button:hover {
+  background: #475569;
+}
+
+.led-button.is-active {
+  background: #22c55e;
+  color: #0f172a;
+}
+
+.led-button--preset {
+  background: #4338ca;
+}
+
+.led-button--preset:hover {
+  background: #4f46e5;
+}
+
+.led-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.led-bar-label {
+  width: 50px;
+  color: #cbd5f5;
+}
+
+.led-bar-track {
+  flex: 1;
+  height: 12px;
+  background: #1f2937;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.led-bar {
+  height: 100%;
+  width: 0;
+  transition: width 0.05s ease-out;
+}
+
+.led-bar-low {
+  background: linear-gradient(90deg, #f43f5e, #ec4899);
+}
+
+.led-bar-mid {
+  background: linear-gradient(90deg, #f59e0b, #eab308);
+}
+
+.led-bar-high {
+  background: linear-gradient(90deg, #22c55e, #10b981);
+}
+
+.led-value {
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+}
