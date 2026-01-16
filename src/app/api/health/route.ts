@@ -21,6 +21,7 @@ export async function GET() {
     uptime: process.uptime(),
     version: process.env.npm_package_version || '1.0.0',
     environment: envStatus.nodeEnv,
+    deployedAt: '2026-01-16T09:30:00Z', // Zeabur deployment test
     
     // 服务状态
     services: {
