@@ -27,7 +27,7 @@ export default function CoverLedPage() {
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const dataArrayRef = useRef<Uint8Array | null>(null);
+  const dataArrayRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
   const audioSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
 
   const barLowRef = useRef<HTMLDivElement | null>(null);

@@ -1,11 +1,11 @@
-import { Renderer, Camera, Program, Mesh, Plane, Texture } from "ogl";
+import { Renderer, Camera, Program, Mesh, Plane, Texture, type OGLRenderingContext } from "ogl";
 import { vertexShader, fragmentShader } from "./shaders";
 import { loadImage } from "./utils";
 
 export class CoverLedVisualizer {
   private container: HTMLElement;
   private renderer: Renderer | null = null;
-  private gl: WebGLRenderingContext | null = null;
+  private gl: OGLRenderingContext | null = null;
   private camera: Camera | null = null;
   private program: Program | null = null;
   private mesh: Mesh | null = null;
@@ -53,11 +53,11 @@ export class CoverLedVisualizer {
       antialias: true,
     });
 
-    this.gl = this.renderer.gl as WebGLRenderingContext;
+    this.gl = this.renderer.gl;
     if (!this.gl) {
       return;
     }
-    this.container.appendChild(this.gl.canvas);
+    this.container.appendChild(this.gl.canvas as HTMLCanvasElement);
     this.resize();
   }
 

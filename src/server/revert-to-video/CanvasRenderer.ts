@@ -1,4 +1,47 @@
-import { createCanvas, loadImage } from "@napi-rs/canvas";
+// Dynamic import to avoid build errors when @napi-rs/canvas is not available
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let canvasModule: any = null;
+
+async function getCanvasModule() {
+  if (!canvasModule) {
+    try {
+      canvasModule = await import("@napi-rs/canvas");
+    } catch {
+      throw new Error(
+        "Video rendering is not available in this environment. " +
+        "@napi-rs/canvas is required but not installed."
+      );
+    }
+  }
+  return canvasModule as {
+    createCanvas: (width: number, height: number) => Canvas;
+    loadImage: (source: string) => Promise<Image>;
+  };
+}
+
+// Minimal type definitions for the canvas module
+interface Canvas {
+  width: number;
+  height: number;
+  getContext(type: "2d"): CanvasRenderingContext2D;
+}
+
+interface Image {
+  width: number;
+  height: number;
+}
+
+interface CanvasRenderingContext2D {
+  fillStyle: string;
+  fillRect(x: number, y: number, w: number, h: number): void;
+  save(): void;
+  restore(): void;
+  translate(x: number, y: number): void;
+  scale(x: number, y: number): void;
+  drawImage(image: Image, x: number, y: number, w: number, h: number): void;
+  getImageData(x: number, y: number, w: number, h: number): ImageData;
+  putImageData(data: ImageData, x: number, y: number): void;
+}
 
 type CoverParams = {
   drawWidth: number;
@@ -22,19 +65,28 @@ type RenderParams = {
 export class CanvasRenderer {
   private width: number;
   private height: number;
-  private canvas: ReturnType<typeof createCanvas>;
-  private ctx: ReturnType<typeof createCanvas>["getContext"];
-  private image: Awaited<ReturnType<typeof loadImage>> | null = null;
+  private canvas: Canvas | null = null;
+  private ctx: CanvasRenderingContext2D | null = null;
+  private image: Image | null = null;
   private coverParams: CoverParams | null = null;
+  private initialized = false;
 
   constructor(options: { width: number; height: number }) {
     this.width = options.width;
     this.height = options.height;
+  }
+
+  private async ensureInitialized() {
+    if (this.initialized) return;
+    const { createCanvas } = await getCanvasModule();
     this.canvas = createCanvas(this.width, this.height);
     this.ctx = this.canvas.getContext("2d");
+    this.initialized = true;
   }
 
   async loadImage(source: string) {
+    await this.ensureInitialized();
+    const { loadImage } = await getCanvasModule();
     this.image = await loadImage(source);
     this.calculateCoverParams();
   }
@@ -63,6 +115,9 @@ export class CanvasRenderer {
   }
 
   renderFrame({ frameIndex, time, audioData, effects }: RenderParams) {
+    if (!this.ctx) {
+      throw new Error("CanvasRenderer not initialized. Call loadImage first.");
+    }
     const { low, high } = audioData;
     const ctx = this.ctx;
 
@@ -102,7 +157,7 @@ export class CanvasRenderer {
     const offset = Math.round(intensity * baseFactor * this.width * multiplier);
     if (offset < 1) return;
 
-    const imageData = this.ctx.getImageData(0, 0, this.width, this.height);
+    const imageData = this.ctx!.getImageData(0, 0, this.width, this.height);
     const data = imageData.data;
     const tempData = new Uint8ClampedArray(data);
 
@@ -119,22 +174,22 @@ export class CanvasRenderer {
       }
     }
 
-    this.ctx.putImageData(imageData, 0, 0);
+    this.ctx!.putImageData(imageData, 0, 0);
   }
 
   private applyBrightness(factor: number) {
-    const imageData = this.ctx.getImageData(0, 0, this.width, this.height);
+    const imageData = this.ctx!.getImageData(0, 0, this.width, this.height);
     const data = imageData.data;
     for (let i = 0; i < data.length; i += 4) {
       data[i] = Math.min(255, data[i] * factor);
       data[i + 1] = Math.min(255, data[i + 1] * factor);
       data[i + 2] = Math.min(255, data[i + 2] * factor);
     }
-    this.ctx.putImageData(imageData, 0, 0);
+    this.ctx!.putImageData(imageData, 0, 0);
   }
 
   private applyFilmGrain(time: number, amount: number) {
-    const imageData = this.ctx.getImageData(0, 0, this.width, this.height);
+    const imageData = this.ctx!.getImageData(0, 0, this.width, this.height);
     const data = imageData.data;
     const grainIntensity = amount * 255;
     const seed = Math.floor(time * 1000) % 10000;
@@ -146,7 +201,7 @@ export class CanvasRenderer {
       data[i + 2] += noise;
     }
 
-    this.ctx.putImageData(imageData, 0, 0);
+    this.ctx!.putImageData(imageData, 0, 0);
   }
 
   private seededRandom(seed: number) {
@@ -160,7 +215,7 @@ export class CanvasRenderer {
     const centerY = this.height / 2;
     const maxDist = Math.sqrt(centerX * centerX + centerY * centerY);
 
-    const imageData = this.ctx.getImageData(0, 0, this.width, this.height);
+    const imageData = this.ctx!.getImageData(0, 0, this.width, this.height);
     const data = imageData.data;
 
     for (let y = 0; y < this.height; y += 1) {
@@ -176,7 +231,7 @@ export class CanvasRenderer {
       }
     }
 
-    this.ctx.putImageData(imageData, 0, 0);
+    this.ctx!.putImageData(imageData, 0, 0);
   }
 
   dispose() {

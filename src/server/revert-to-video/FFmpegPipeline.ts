@@ -74,7 +74,7 @@ export class FFmpegPipeline extends EventEmitter {
     });
 
     this.stderrBuffer = "";
-    this.process.stderr.on("data", (data) => {
+    this.process.stderr?.on("data", (data) => {
       const message = data.toString();
       this.stderrBuffer += message;
       const frameMatch = message.match(/frame=\s*(\d+)/);
@@ -118,23 +118,29 @@ export class FFmpegPipeline extends EventEmitter {
         return;
       }
 
+      const stdin = this.process.stdin;
+      if (!stdin) {
+        reject(new Error("FFmpeg stdin not available"));
+        return;
+      }
+
       const onError = (err: Error) => {
-        this.process?.stdin.removeListener("drain", onDrain);
+        stdin.removeListener("drain", onDrain);
         reject(err);
       };
       const onDrain = () => {
-        this.process?.stdin.removeListener("error", onError);
+        stdin.removeListener("error", onError);
         resolve();
       };
 
-      this.process.stdin.once("error", onError);
-      const canContinue = this.process.stdin.write(frameBuffer);
+      stdin.once("error", onError);
+      const canContinue = stdin.write(frameBuffer);
 
       if (canContinue) {
-        this.process.stdin.removeListener("error", onError);
+        stdin.removeListener("error", onError);
         resolve();
       } else {
-        this.process.stdin.once("drain", onDrain);
+        stdin.once("drain", onDrain);
       }
     });
   }
@@ -148,7 +154,7 @@ export class FFmpegPipeline extends EventEmitter {
 
       this.once("complete", resolve);
       this.once("error", reject);
-      this.process.stdin.end();
+      this.process.stdin?.end();
     });
   }
 
