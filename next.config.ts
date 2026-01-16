@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
 	reactCompiler: true,
+	// 启用 standalone 输出模式，用于 Docker 部署
+	output: "standalone",
 	// 关闭开发环境左下角的 Next.js 指示图标
 	devIndicators: false,
 	// 将原生模块标记为服务器外部包，避免 Turbopack 打包错误
