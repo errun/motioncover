@@ -124,13 +124,13 @@ export default async function SpotifyCanvasMakerPage() {
           </h2>
           <p>
             {isZh
-              ? "如果你想参考某首歌的 Canvas（用于学习/个人用途），可以用下载器快速预览与下载："
-              : "If you want to reference a track’s Canvas (learning/personal use), you can preview and download it here:"}{" "}
+              ? "如果你想参考某首歌的 Canvas（用于学习/个人用途），可以浏览热门歌曲快速预览与下载："
+              : "If you want to reference a track’s Canvas (learning/personal use), you can browse trending tracks:"}{" "}
             <Link
-              href={withLocalePathname("/downloader", locale)}
+              href={withLocalePathname("/charts", locale)}
               className="text-[#1db954] hover:underline"
             >
-              {isZh ? "打开 Spotify Canvas 下载器" : "Open the Spotify Canvas downloader"}
+              {isZh ? "浏览热门歌曲" : "Browse trending tracks"}
             </Link>
             .
           </p>

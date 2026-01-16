@@ -15,7 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
       follow: true,
     },
     alternates: {
-      canonical: `${baseUrl}${withLocalePathname("/downloader", locale)}`,
+      canonical: `${baseUrl}${withLocalePathname("/charts", locale)}`,
     },
   };
 }

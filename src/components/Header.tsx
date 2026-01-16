@@ -21,7 +21,6 @@ export default function Header() {
 
   const navLinks = [
     { href: "/visualizer", label: messages.nav.visualizer },
-    { href: "/downloader", label: messages.nav.downloader },
     { href: "/spotify-canvas", label: messages.nav.guide },
     { href: "/charts", label: messages.nav.charts },
   ];

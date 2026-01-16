@@ -52,9 +52,9 @@ export default async function SpotifyCanvasGuidePage() {
   const cards = isZh
     ? [
         {
-          title: "免费下载器",
-          desc: "粘贴歌曲链接，预览并下载 Canvas（如有）。",
-          href: "/downloader",
+          title: "浏览热门 Canvas",
+          desc: "浏览热门歌曲的 Canvas 视频，预览并下载。",
+          href: "/charts",
         },
         {
           title: "尺寸与规格",
@@ -79,9 +79,9 @@ export default async function SpotifyCanvasGuidePage() {
       ]
     : [
         {
-          title: "Free Downloader",
-          desc: "Paste a track link to preview and download the Canvas (if available).",
-          href: "/downloader",
+          title: "Browse Top Canvas",
+          desc: "Browse Canvas videos from trending tracks, preview and download.",
+          href: "/charts",
         },
         {
           title: "Dimensions & Specs",

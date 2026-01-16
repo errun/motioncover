@@ -4,7 +4,6 @@ const MESSAGES = {
   en: {
     nav: {
       visualizer: "Visualizer",
-      downloader: "Downloader",
       guide: "Spotify Canvas",
       charts: "Charts",
     },
@@ -21,7 +20,6 @@ const MESSAGES = {
   zh: {
     nav: {
       visualizer: "可视化",
-      downloader: "下载器",
       guide: "Spotify Canvas 指南",
       charts: "排行榜",
     },

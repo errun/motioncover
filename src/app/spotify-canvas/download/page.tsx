@@ -51,8 +51,8 @@ export default async function SpotifyCanvasDownloadGuidePage() {
         </h1>
         <p className="text-white/70 text-center mb-8">
           {isZh
-            ? "用下载器粘贴歌曲链接即可。如果该曲目有 Canvas，就可以预览并下载。"
-            : "Paste a track link into the downloader. If the track has a Canvas, you can preview and download it."}
+            ? "浏览热门歌曲找到喜欢的 Canvas，或搜索特定歌曲。如果该曲目有 Canvas，就可以预览并下载。"
+            : "Browse trending tracks or search for a specific song. If the track has a Canvas, you can preview and download it."}
         </p>
 
         <section className="bg-[#181818] rounded-xl p-6 border border-white/10 space-y-4 text-white/70 leading-relaxed">
@@ -62,22 +62,22 @@ export default async function SpotifyCanvasDownloadGuidePage() {
           <ol className="list-decimal pl-5 space-y-2">
             <li>
               <Link
-                href={withLocalePathname("/downloader", locale)}
+                href={withLocalePathname("/charts", locale)}
                 className="text-[#1db954] hover:underline"
               >
-                {isZh ? "打开下载器页面" : "Open the downloader"}
+                {isZh ? "浏览热门歌曲" : "Browse trending tracks"}
               </Link>
-              {isZh ? "。" : "."}
+              {isZh ? "，或使用搜索功能查找特定歌曲。" : ", or use search to find a specific song."}
             </li>
             <li>
               {isZh
-                ? "粘贴 Spotify 歌曲链接（例如 open.spotify.com/track/...）。"
-                : "Paste a Spotify track link (e.g. open.spotify.com/track/...)."}
+                ? "点击歌曲进入 Canvas 页面。"
+                : "Click a track to view its Canvas page."}
             </li>
             <li>
               {isZh
-                ? "等待加载后预览 Canvas，点击 Download 下载。"
-                : "Wait for loading, preview the Canvas, then click Download."}
+                ? "预览 Canvas，点击 Download 下载。"
+                : "Preview the Canvas, then click Download."}
             </li>
           </ol>
         </section>

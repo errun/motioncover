@@ -279,10 +279,10 @@ export default async function GovernorsBall2026LineupPage() {
                 {isZh ? "Spotify Canvas 指南" : "Spotify Canvas guide"}
               </Link>
               <Link
-                href={withLocalePathname("/downloader", locale)}
+                href={withLocalePathname("/charts", locale)}
                 className="text-xs text-[#1db954] hover:underline"
               >
-                {isZh ? "打开下载器" : "Open downloader"}
+                {isZh ? "浏览热门歌曲" : "Browse charts"}
               </Link>
             </div>
           </div>

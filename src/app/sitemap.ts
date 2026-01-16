@@ -9,7 +9,6 @@ const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.motioncover.app
 
 const ROUTES: string[] = [
   "/",
-  "/downloader",
   "/spotify-canvas",
   "/spotify-canvas/dimensions",
   "/spotify-canvas/length",
