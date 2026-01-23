@@ -37,11 +37,17 @@ export class VideoExporter {
     audioFile,
     imageFile,
     effects,
+    maxDurationSec,
+    segmentStartSec,
+    segmentDurationSec,
     onProgress = () => {},
   }: {
     audioFile: File;
     imageFile: File | string;
     effects?: EffectConfig;
+    maxDurationSec?: number;
+    segmentStartSec?: number;
+    segmentDurationSec?: number;
     onProgress?: (p: ExportProgress) => void;
   }): Promise<{ url: string; jobId: string }> {
     try {
@@ -51,6 +57,9 @@ export class VideoExporter {
         audioFile,
         imageFile,
         effects,
+        maxDurationSec,
+        segmentStartSec,
+        segmentDurationSec,
         onProgress: (p) => {
           onProgress({
             stage: "recipe",

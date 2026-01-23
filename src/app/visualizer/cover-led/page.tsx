@@ -6,10 +6,13 @@ import { CoverLedVisualizer } from "@/features/cover-led/CoverLedVisualizer";
 import { VideoExporter } from "@/features/revert-to-video/VideoExporter";
 import { createDefaultEffects } from "@/features/revert-to-video/recipeTypes";
 import type { AudioMappingConfig, EffectConfig } from "@/features/revert-to-video/recipeTypes";
+import { extractTrackId } from "@/features/spotify-core";
 
 type ExportStatus = "idle" | "running" | "done" | "error";
 
 const DEFAULT_EFFECTS = createDefaultEffects();
+const SPOTIFY_MIN_SECONDS = 3;
+const SPOTIFY_MAX_SECONDS = 8;
 const DEFAULT_MAPPING: AudioMappingConfig = DEFAULT_EFFECTS.audioMapping || {
   globalGain: 0.75,
   lowBaseGain: 0.65,
@@ -29,6 +32,9 @@ export default function CoverLedPage() {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const dataArrayRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
   const audioSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const previewTimeoutRef = useRef<number | null>(null);
+  const waveformCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const waveformPeaksRef = useRef<Float32Array | null>(null);
 
   const barLowRef = useRef<HTMLDivElement | null>(null);
   const barMidRef = useRef<HTMLDivElement | null>(null);
@@ -54,8 +60,128 @@ export default function CoverLedPage() {
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportResolution, setExportResolution] = useState<number>(1080);
   const [exportFps, setExportFps] = useState<number>(30);
+  const [exportPreset, setExportPreset] = useState<"custom" | "spotify">("custom");
+  const [audioDuration, setAudioDuration] = useState<number | null>(null);
+  const [spotifyStartSec, setSpotifyStartSec] = useState(0);
+  const [spotifyEndSec, setSpotifyEndSec] = useState(SPOTIFY_MAX_SECONDS);
+  const [previewing, setPreviewing] = useState(false);
+  const [editingSegment, setEditingSegment] = useState(false);
+  const [waveformZoom, setWaveformZoom] = useState(1);
+
+  const [spotifyLink, setSpotifyLink] = useState<string>("");
+  const [spotifyLoading, setSpotifyLoading] = useState(false);
+  const [spotifyError, setSpotifyError] = useState<string | null>(null);
+  const [spotifyTrack, setSpotifyTrack] = useState<{
+    name: string;
+    artists: string[];
+    albumArt: string | null;
+    previewUrl: string | null;
+  } | null>(null);
+  const lastSpotifyLinkRef = useRef<string>("");
 
   const exportEnabled = Boolean(audioFile && imageDataUrl && exportStatus !== "running");
+  const exportSettings = useMemo(() => {
+    if (exportPreset === "spotify") {
+      return { width: 720, height: 1280, fps: 24 };
+    }
+    return { width: exportResolution, height: exportResolution, fps: exportFps };
+  }, [exportPreset, exportResolution, exportFps]);
+
+  const spotifyRangeMax = useMemo(() => {
+    if (audioDuration && Number.isFinite(audioDuration)) {
+      return audioDuration;
+    }
+    return SPOTIFY_MAX_SECONDS;
+  }, [audioDuration]);
+
+  const spotifyMinLength = useMemo(
+    () => Math.min(SPOTIFY_MIN_SECONDS, spotifyRangeMax),
+    [spotifyRangeMax]
+  );
+  const spotifyMaxLength = useMemo(
+    () => Math.min(SPOTIFY_MAX_SECONDS, spotifyRangeMax),
+    [spotifyRangeMax]
+  );
+  const spotifyStartPercent = spotifyRangeMax > 0 ? (spotifyStartSec / spotifyRangeMax) * 100 : 0;
+  const spotifyEndPercent = spotifyRangeMax > 0 ? (spotifyEndSec / spotifyRangeMax) * 100 : 0;
+  const spotifySegmentDuration = Math.max(0, spotifyEndSec - spotifyStartSec);
+
+  useEffect(() => {
+    if (exportPreset !== "spotify") return;
+    const defaultEnd = Math.min(spotifyRangeMax, SPOTIFY_MAX_SECONDS);
+    setSpotifyStartSec(0);
+    setSpotifyEndSec(defaultEnd);
+  }, [exportPreset, spotifyRangeMax]);
+
+  useEffect(() => {
+    setWaveformZoom(1);
+  }, [audioFile]);
+
+  const applySpotifyStart = useCallback(
+    (nextStart: number) => {
+      const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+      let start = clamp(nextStart, 0, spotifyRangeMax);
+      let end = spotifyEndSec;
+
+      if (end < start) {
+        end = start;
+      }
+
+      if (end - start < spotifyMinLength) {
+        end = start + spotifyMinLength;
+      }
+      if (end - start > spotifyMaxLength) {
+        end = start + spotifyMaxLength;
+      }
+
+      if (end > spotifyRangeMax) {
+        end = spotifyRangeMax;
+        if (end - start < spotifyMinLength) {
+          start = Math.max(0, end - spotifyMinLength);
+        }
+        if (end - start > spotifyMaxLength) {
+          start = Math.max(0, end - spotifyMaxLength);
+        }
+      }
+
+      setSpotifyStartSec(start);
+      setSpotifyEndSec(end);
+    },
+    [spotifyRangeMax, spotifyMinLength, spotifyMaxLength, spotifyEndSec]
+  );
+
+  const applySpotifyEnd = useCallback(
+    (nextEnd: number) => {
+      const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+      let end = clamp(nextEnd, 0, spotifyRangeMax);
+      let start = spotifyStartSec;
+
+      if (start > end) {
+        start = end;
+      }
+
+      if (end - start < spotifyMinLength) {
+        start = end - spotifyMinLength;
+      }
+      if (end - start > spotifyMaxLength) {
+        start = end - spotifyMaxLength;
+      }
+
+      if (start < 0) {
+        start = 0;
+        if (end - start < spotifyMinLength) {
+          end = Math.min(spotifyRangeMax, start + spotifyMinLength);
+        }
+        if (end - start > spotifyMaxLength) {
+          end = Math.min(spotifyRangeMax, start + spotifyMaxLength);
+        }
+      }
+
+      setSpotifyStartSec(start);
+      setSpotifyEndSec(end);
+    },
+    [spotifyRangeMax, spotifyMinLength, spotifyMaxLength, spotifyStartSec]
+  );
 
   const updateMapping = useCallback((key: keyof AudioMappingConfig, value: number) => {
     setMapping((prev) => {
@@ -73,6 +199,10 @@ export default function CoverLedPage() {
       visualizerRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    visualizerRef.current?.setFitMode(exportPreset === "spotify" ? "letterbox" : "cover");
+  }, [exportPreset]);
 
   useEffect(() => {
     let rafId: number | null = null;
@@ -203,6 +333,10 @@ export default function CoverLedPage() {
         URL.revokeObjectURL(audioUrlRef.current);
         audioUrlRef.current = null;
       }
+      if (previewTimeoutRef.current) {
+        window.clearTimeout(previewTimeoutRef.current);
+        previewTimeoutRef.current = null;
+      }
     };
   }, []);
 
@@ -245,6 +379,159 @@ export default function CoverLedPage() {
     [initAudioAnalyser]
   );
 
+  useEffect(() => {
+    let active = true;
+    const canvas = waveformCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const setupCanvas = () => {
+      const ratio = window.devicePixelRatio || 1;
+      const displayWidth = canvas.clientWidth || 480;
+      const displayHeight = canvas.clientHeight || 96;
+      canvas.width = Math.max(1, Math.floor(displayWidth * ratio));
+      canvas.height = Math.max(1, Math.floor(displayHeight * ratio));
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      return { width: displayWidth, height: displayHeight };
+    };
+
+    const drawPlaceholder = (width: number, height: number) => {
+      ctx.fillStyle = "#0a0a0a";
+      ctx.fillRect(0, 0, width, height);
+      ctx.strokeStyle = "#2a2a2a";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, height / 2);
+      ctx.lineTo(width, height / 2);
+      ctx.stroke();
+    };
+
+    const { width, height } = setupCanvas();
+    drawPlaceholder(width, height);
+
+    if (!audioFile) return;
+
+    let audioContext: AudioContext | null = null;
+
+    const render = async () => {
+      try {
+        const buffer = await audioFile.arrayBuffer();
+        if (!active) return;
+        const AudioContextCtor =
+          window.AudioContext ||
+          (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (!AudioContextCtor) return;
+        audioContext = new AudioContextCtor();
+        const decoded = await audioContext.decodeAudioData(buffer.slice(0));
+        if (!active) return;
+
+        const channelData = decoded.getChannelData(0);
+        const peaksTarget = Math.min(12000, Math.max(1200, Math.floor(decoded.duration * 240)));
+        const samples = Math.max(1, peaksTarget);
+        const blockSize = Math.max(1, Math.floor(channelData.length / samples));
+        const peaks = new Float32Array(samples);
+
+        for (let i = 0; i < samples; i += 1) {
+          const start = i * blockSize;
+          const end = Math.min(channelData.length, start + blockSize);
+          let peak = 0;
+          for (let j = start; j < end; j += 1) {
+            const value = Math.abs(channelData[j]);
+            if (value > peak) peak = value;
+          }
+          peaks[i] = peak;
+        }
+
+        waveformPeaksRef.current = peaks;
+      } catch (error) {
+        const { width: drawWidth, height: drawHeight } = setupCanvas();
+        drawPlaceholder(drawWidth, drawHeight);
+        console.error("[MusicLed] waveform render failed", error);
+      } finally {
+        if (audioContext) {
+          audioContext.close();
+        }
+      }
+    };
+
+    void render();
+
+    return () => {
+      active = false;
+      waveformPeaksRef.current = null;
+      if (audioContext) {
+        audioContext.close();
+      }
+    };
+  }, [audioFile]);
+
+  useEffect(() => {
+    let rafId: number | null = null;
+    const canvas = waveformCanvasRef.current;
+    const player = audioPlayerRef.current;
+    if (!canvas || !player) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const draw = () => {
+      const peaks = waveformPeaksRef.current;
+      if (!peaks) {
+        rafId = requestAnimationFrame(draw);
+        return;
+      }
+
+      const ratio = window.devicePixelRatio || 1;
+      const width = canvas.clientWidth || 480;
+      const height = canvas.clientHeight || 96;
+      canvas.width = Math.max(1, Math.floor(width * ratio));
+      canvas.height = Math.max(1, Math.floor(height * ratio));
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+
+      const duration = player.duration || 0;
+      const progress = duration > 0 ? Math.min(1, Math.max(0, player.currentTime / duration)) : 0;
+      const total = peaks.length;
+      const zoom = Math.max(1, waveformZoom);
+      let windowSize = Math.max(60, Math.floor(total / zoom));
+      if (windowSize > total) windowSize = total;
+      const halfWindow = windowSize / 2;
+      const center = progress * total;
+      let start = Math.max(0, Math.min(total - windowSize, center - halfWindow));
+      let end = Math.min(total, start + windowSize);
+
+      ctx.fillStyle = "#0a0a0a";
+      ctx.fillRect(0, 0, width, height);
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 1;
+      const mid = height / 2;
+      ctx.beginPath();
+      for (let i = 0; i < windowSize; i += 1) {
+        const index = Math.min(total - 1, Math.floor(start + i));
+        const x = (i / Math.max(1, windowSize - 1)) * width;
+        const amp = peaks[index] * height * 0.45;
+        ctx.moveTo(x, mid - amp);
+        ctx.lineTo(x, mid + amp);
+      }
+      ctx.stroke();
+
+      const playX =
+        windowSize > 0 ? ((center - start) / windowSize) * width : progress * width;
+      ctx.strokeStyle = "#f97316";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(playX, 0);
+      ctx.lineTo(playX, height);
+      ctx.stroke();
+
+      rafId = requestAnimationFrame(draw);
+    };
+
+    rafId = requestAnimationFrame(draw);
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, [audioFile, waveformZoom]);
+
   const handleImageChange = useCallback((file: File) => {
     const reader = new FileReader();
     reader.onload = () => {
@@ -256,6 +543,91 @@ export default function CoverLedPage() {
     };
     reader.readAsDataURL(file);
   }, []);
+
+  const loadImageFromUrl = useCallback(
+    async (url: string) => {
+      const response = await fetch(`/api/musicled/proxy?url=${encodeURIComponent(url)}`);
+      if (!response.ok) {
+        throw new Error("Failed to download cover image");
+      }
+      const blob = await response.blob();
+      const file = new File([blob], "spotify-cover.jpg", { type: blob.type || "image/jpeg" });
+      handleImageChange(file);
+    },
+    [handleImageChange]
+  );
+
+  const loadAudioFromUrl = useCallback(
+    async (url: string) => {
+      const response = await fetch(`/api/musicled/proxy?url=${encodeURIComponent(url)}`);
+      if (!response.ok) {
+        throw new Error("Failed to download preview audio");
+      }
+      const blob = await response.blob();
+      const file = new File([blob], "spotify-preview.mp3", { type: blob.type || "audio/mpeg" });
+      handleAudioChange(file);
+    },
+    [handleAudioChange]
+  );
+
+  const handleSpotifyImport = useCallback(async (linkOverride?: string) => {
+    const linkSource = typeof linkOverride === "string" ? linkOverride : spotifyLink;
+    const link = linkSource.trim();
+    if (!link) {
+      setSpotifyError("Paste a Spotify track URL first.");
+      return;
+    }
+    lastSpotifyLinkRef.current = link;
+    setSpotifyLoading(true);
+    setSpotifyError(null);
+    setSpotifyTrack(null);
+
+    try {
+      const response = await fetch(`/api/musicled/spotify?link=${encodeURIComponent(link)}`);
+      if (!response.ok) {
+        throw new Error("Spotify request failed.");
+      }
+      const data = await response.json() as {
+        name: string;
+        artists: string[];
+        albumArt: string | null;
+        previewUrl: string | null;
+      };
+
+      setSpotifyTrack(data);
+      if (data.albumArt) {
+        await loadImageFromUrl(data.albumArt);
+      }
+      if (data.previewUrl) {
+        await loadAudioFromUrl(data.previewUrl);
+      } else {
+        setSpotifyError("Spotify preview audio is not available for this track.");
+      }
+
+      setExportPreset("spotify");
+    } catch (error) {
+      setSpotifyError(error instanceof Error ? error.message : "Spotify import failed.");
+    } finally {
+      setSpotifyLoading(false);
+    }
+  }, [spotifyLink, loadAudioFromUrl, loadImageFromUrl]);
+
+  useEffect(() => {
+    if (spotifyLoading) return;
+    const trimmed = spotifyLink.trim();
+    if (!trimmed) return;
+    if (trimmed === lastSpotifyLinkRef.current) return;
+    if (!extractTrackId(trimmed)) return;
+
+    const timer = window.setTimeout(() => {
+      if (spotifyLoading) return;
+      if (trimmed === lastSpotifyLinkRef.current) return;
+      lastSpotifyLinkRef.current = trimmed;
+      handleSpotifyImport(trimmed);
+    }, 600);
+
+    return () => window.clearTimeout(timer);
+  }, [spotifyLink, spotifyLoading, handleSpotifyImport]);
 
   const handleExport = useCallback(async () => {
     if (!audioFile || !imageDataUrl) {
@@ -275,10 +647,15 @@ export default function CoverLedPage() {
       audioMapping: mappingRef.current,
     };
 
+    const { width, height, fps } = exportSettings;
+    const segmentStartSec = exportPreset === "spotify" ? spotifyStartSec : undefined;
+    const segmentDurationSec =
+      exportPreset === "spotify" ? Math.max(0, spotifyEndSec - spotifyStartSec) : undefined;
+
     const exporter = new VideoExporter({
-      fps: exportFps,
-      width: exportResolution,
-      height: exportResolution,
+      fps,
+      width,
+      height,
     });
     exporterRef.current = exporter;
 
@@ -287,6 +664,8 @@ export default function CoverLedPage() {
         audioFile,
         imageFile: imageDataUrl,
         effects,
+        segmentStartSec,
+        segmentDurationSec,
         onProgress: (p) => {
           setExportProgress(p.progress);
           setExportMessage(p.message);
@@ -300,7 +679,7 @@ export default function CoverLedPage() {
       setExportStatus("error");
       setExportError(error instanceof Error ? error.message : "Export failed");
     }
-  }, [audioFile, imageDataUrl, exportFps, exportResolution]);
+  }, [audioFile, imageDataUrl, exportSettings, exportPreset, spotifyStartSec, spotifyEndSec]);
 
   const handleCancel = useCallback(() => {
     exporterRef.current?.cancel();
@@ -311,6 +690,34 @@ export default function CoverLedPage() {
     setDownloadUrl(null);
   }, []);
 
+  const handlePreview = useCallback(() => {
+    const player = audioPlayerRef.current;
+    if (!player) return;
+
+    if (previewTimeoutRef.current) {
+      window.clearTimeout(previewTimeoutRef.current);
+      previewTimeoutRef.current = null;
+    }
+
+    let start = 0;
+    let duration = Math.min(SPOTIFY_MAX_SECONDS, player.duration || SPOTIFY_MAX_SECONDS);
+
+    if (exportPreset === "spotify") {
+      start = spotifyStartSec;
+      duration = Math.max(0.1, spotifyEndSec - spotifyStartSec);
+    }
+
+    player.currentTime = Math.min(start, Math.max(0, (player.duration || start) - 0.1));
+    void player.play().catch(() => {});
+    setPreviewing(true);
+
+    previewTimeoutRef.current = window.setTimeout(() => {
+      player.pause();
+      setPreviewing(false);
+      previewTimeoutRef.current = null;
+    }, duration * 1000);
+  }, [exportPreset, spotifyStartSec, spotifyEndSec]);
+
   const globalGainLabel = useMemo(() => mapping.globalGain.toFixed(2), [mapping.globalGain]);
   const lowBaseLabel = useMemo(() => mapping.lowBaseGain.toFixed(2), [mapping.lowBaseGain]);
   const lowDynLabel = useMemo(() => mapping.lowDynGain.toFixed(2), [mapping.lowDynGain]);
@@ -318,6 +725,37 @@ export default function CoverLedPage() {
   const midDynLabel = useMemo(() => mapping.midDynGain.toFixed(2), [mapping.midDynGain]);
   const highBaseLabel = useMemo(() => mapping.highBaseGain.toFixed(2), [mapping.highBaseGain]);
   const highDynLabel = useMemo(() => mapping.highDynGain.toFixed(2), [mapping.highDynGain]);
+  const waveformLabel = useMemo(() => {
+    if (!audioFile) return "No audio loaded";
+    if (audioDuration && Number.isFinite(audioDuration)) return `${audioDuration.toFixed(1)}s`;
+    return "Loaded";
+  }, [audioFile, audioDuration]);
+
+  const getWaveformRange = useCallback(
+    (clientX: number) => {
+      const canvas = waveformCanvasRef.current;
+      const player = audioPlayerRef.current;
+      const peaks = waveformPeaksRef.current;
+      if (!canvas || !player || !peaks || !player.duration) {
+        return null;
+      }
+
+      const rect = canvas.getBoundingClientRect();
+      const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+      const total = peaks.length;
+      const zoom = Math.max(1, waveformZoom);
+      let windowSize = Math.max(60, Math.floor(total / zoom));
+      if (windowSize > total) windowSize = total;
+      const halfWindow = windowSize / 2;
+      const progress = Math.min(1, Math.max(0, player.currentTime / player.duration));
+      const center = progress * total;
+      const start = Math.max(0, Math.min(total - windowSize, center - halfWindow));
+      const targetIndex = start + ratio * windowSize;
+      const targetProgress = Math.min(1, Math.max(0, targetIndex / total));
+      return targetProgress * player.duration;
+    },
+    [waveformZoom]
+  );
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -325,7 +763,7 @@ export default function CoverLedPage() {
         <div>
           <h1 className="text-2xl font-bold">MusicLed</h1>
           <p className="text-zinc-400 text-sm mt-1">
-            Tune audio mapping and export a rendered cover video via the local render server.
+            Import a Spotify track, tune audio mapping, and export a Canvas-ready video.
           </p>
         </div>
         <Link
@@ -340,7 +778,9 @@ export default function CoverLedPage() {
         <section className="w-full lg:w-[520px]">
           <div
             ref={containerRef}
-            className="aspect-square w-full rounded-2xl overflow-hidden bg-zinc-900 border border-zinc-800 shadow-[0_20px_60px_rgba(0,0,0,0.5)]"
+            className={`w-full rounded-2xl overflow-hidden bg-zinc-900 border border-zinc-800 shadow-[0_20px_60px_rgba(0,0,0,0.5)] ${
+              exportPreset === "spotify" ? "aspect-[9/16]" : "aspect-square"
+            }`}
           />
           <p className="text-xs text-zinc-500 mt-3">
             Upload audio and cover image to drive the preview. Export uses the built-in renderer
@@ -349,6 +789,36 @@ export default function CoverLedPage() {
         </section>
 
         <section className="flex-1 space-y-4">
+          <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 space-y-3">
+            <h2 className="text-sm font-semibold text-zinc-200">Spotify Import</h2>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input
+                type="text"
+                value={spotifyLink}
+                onChange={(event) => setSpotifyLink(event.target.value)}
+                placeholder="Paste Spotify track URL"
+                className="flex-1 rounded-lg bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white"
+              />
+              <button
+                type="button"
+                onClick={handleSpotifyImport}
+                disabled={spotifyLoading}
+                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                  spotifyLoading ? "bg-zinc-800 text-zinc-500" : "bg-emerald-500 text-white hover:bg-emerald-600"
+                }`}
+              >
+                {spotifyLoading ? "Loading..." : "Fetch"}
+              </button>
+            </div>
+            {spotifyTrack && (
+              <div className="text-xs text-zinc-400">
+                <span className="text-zinc-200 font-semibold">{spotifyTrack.name}</span>
+                {" "}· {spotifyTrack.artists.join(", ")}
+              </div>
+            )}
+            {spotifyError && <p className="text-xs text-rose-400">{spotifyError}</p>}
+          </div>
+
           <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 space-y-4">
             <h2 className="text-sm font-semibold text-zinc-200">Global Gain</h2>
             <div className="space-y-2">
@@ -473,6 +943,86 @@ export default function CoverLedPage() {
           </div>
 
           <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 space-y-3">
+            <h2 className="text-sm font-semibold text-zinc-200">Spectrum Monitor</h2>
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center gap-3">
+                <span className="w-12 text-zinc-400">Low</span>
+                <div className="flex-1 h-3 bg-zinc-800 rounded-full overflow-hidden">
+                  <div ref={barLowRef} className="h-full bg-gradient-to-r from-rose-500 to-pink-500 w-0" />
+                </div>
+                <span ref={lowValueRef} className="text-zinc-300 w-12 text-right">0.00</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="w-12 text-zinc-400">Mid</span>
+                <div className="flex-1 h-3 bg-zinc-800 rounded-full overflow-hidden">
+                  <div ref={barMidRef} className="h-full bg-gradient-to-r from-amber-400 to-yellow-400 w-0" />
+                </div>
+                <span ref={midValueRef} className="text-zinc-300 w-12 text-right">0.00</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="w-12 text-zinc-400">High</span>
+                <div className="flex-1 h-3 bg-zinc-800 rounded-full overflow-hidden">
+                  <div ref={barHighRef} className="h-full bg-gradient-to-r from-emerald-400 to-teal-400 w-0" />
+                </div>
+                <span ref={highValueRef} className="text-zinc-300 w-12 text-right">0.00</span>
+              </div>
+            </div>
+            <div className="mt-4 space-y-2">
+              <div className="flex items-center justify-between text-xs text-zinc-400">
+                <span>Waveform</span>
+                <span>{waveformLabel}</span>
+              </div>
+              <div className="rounded-lg border border-zinc-800 bg-zinc-950/70 p-2">
+                <canvas
+                  ref={waveformCanvasRef}
+                  className="w-full h-24"
+                  onPointerDown={(event) => {
+                    const player = audioPlayerRef.current;
+                    if (!player) return;
+                    event.currentTarget.setPointerCapture(event.pointerId);
+                    const targetTime = getWaveformRange(event.clientX);
+                    if (typeof targetTime === "number") {
+                      player.currentTime = targetTime;
+                    }
+                    player.play().catch(() => {});
+                  }}
+                  onPointerMove={(event) => {
+                    if (!(event.buttons & 1)) return;
+                    const player = audioPlayerRef.current;
+                    if (!player) return;
+                    const targetTime = getWaveformRange(event.clientX);
+                    if (typeof targetTime === "number") {
+                      player.currentTime = targetTime;
+                    }
+                  }}
+                  onPointerUp={(event) => {
+                    event.currentTarget.releasePointerCapture(event.pointerId);
+                  }}
+                  onPointerCancel={(event) => {
+                    event.currentTarget.releasePointerCapture(event.pointerId);
+                  }}
+                />
+              </div>
+              <div className="flex items-center gap-3 text-xs text-zinc-400">
+                <span className="w-12">Zoom</span>
+                <input
+                  type="range"
+                  min={1}
+                  max={8}
+                  step={0.25}
+                  value={waveformZoom}
+                  onChange={(event) => setWaveformZoom(parseFloat(event.target.value))}
+                  className="flex-1 accent-sky-400"
+                />
+                <span className="w-12 text-right">{waveformZoom.toFixed(2)}x</span>
+              </div>
+              {!audioFile && (
+                <p className="text-xs text-zinc-500">Upload audio to preview the waveform.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 space-y-3">
             <h2 className="text-sm font-semibold text-zinc-200">Audio Control</h2>
             <div
               className={`border border-dashed rounded-lg p-4 text-sm text-zinc-400 transition ${
@@ -510,6 +1060,25 @@ export default function CoverLedPage() {
             <audio
               ref={audioPlayerRef}
               controls
+              onLoadedMetadata={() => {
+                if (audioPlayerRef.current?.duration) {
+                  setAudioDuration(audioPlayerRef.current.duration);
+                }
+              }}
+              onPause={() => {
+                if (previewTimeoutRef.current) {
+                  window.clearTimeout(previewTimeoutRef.current);
+                  previewTimeoutRef.current = null;
+                }
+                setPreviewing(false);
+              }}
+              onEnded={() => {
+                if (previewTimeoutRef.current) {
+                  window.clearTimeout(previewTimeoutRef.current);
+                  previewTimeoutRef.current = null;
+                }
+                setPreviewing(false);
+              }}
               onPlay={() => {
                 if (audioContextRef.current?.state === "suspended") {
                   audioContextRef.current.resume();
@@ -521,34 +1090,13 @@ export default function CoverLedPage() {
           </div>
 
           <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 space-y-3">
-            <h2 className="text-sm font-semibold text-zinc-200">Spectrum Monitor</h2>
-            <div className="space-y-3 text-sm">
-              <div className="flex items-center gap-3">
-                <span className="w-12 text-zinc-400">Low</span>
-                <div className="flex-1 h-3 bg-zinc-800 rounded-full overflow-hidden">
-                  <div ref={barLowRef} className="h-full bg-gradient-to-r from-rose-500 to-pink-500 w-0" />
-                </div>
-                <span ref={lowValueRef} className="text-zinc-300 w-12 text-right">0.00</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="w-12 text-zinc-400">Mid</span>
-                <div className="flex-1 h-3 bg-zinc-800 rounded-full overflow-hidden">
-                  <div ref={barMidRef} className="h-full bg-gradient-to-r from-amber-400 to-yellow-400 w-0" />
-                </div>
-                <span ref={midValueRef} className="text-zinc-300 w-12 text-right">0.00</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="w-12 text-zinc-400">High</span>
-                <div className="flex-1 h-3 bg-zinc-800 rounded-full overflow-hidden">
-                  <div ref={barHighRef} className="h-full bg-gradient-to-r from-emerald-400 to-teal-400 w-0" />
-                </div>
-                <span ref={highValueRef} className="text-zinc-300 w-12 text-right">0.00</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 space-y-3">
             <h2 className="text-sm font-semibold text-zinc-200">Cover Image</h2>
+            {exportPreset === "spotify" && (
+              <p className="text-xs text-amber-300/90">
+                Spotify Canvas requires a 9:16 portrait cover (720x1280). Upload a matching image
+                to avoid letterboxing.
+              </p>
+            )}
             <div
               className={`border border-dashed rounded-lg p-4 text-sm text-zinc-400 transition ${
                 imageDragOver ? "border-sky-400 bg-sky-500/10 text-sky-200" : "border-zinc-700"
@@ -586,32 +1134,166 @@ export default function CoverLedPage() {
 
           <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 space-y-4">
             <h2 className="text-sm font-semibold text-zinc-200">Export Video</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <label className="text-sm text-zinc-400">
-                Resolution
-                <select
-                  value={exportResolution}
-                  onChange={(event) => setExportResolution(parseInt(event.target.value, 10))}
-                  className="mt-2 w-full rounded-lg bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white"
-                >
-                  <option value={720}>720p (720x720)</option>
-                  <option value={1080}>1080p (1080x1080)</option>
-                </select>
-              </label>
-              <label className="text-sm text-zinc-400">
-                FPS
-                <select
-                  value={exportFps}
-                  onChange={(event) => setExportFps(parseInt(event.target.value, 10))}
-                  className="mt-2 w-full rounded-lg bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white"
-                >
-                  <option value={24}>24 fps</option>
-                  <option value={30}>30 fps</option>
-                </select>
-              </label>
-            </div>
+            <label className="text-sm text-zinc-400">
+              Preset
+              <select
+                value={exportPreset}
+                onChange={(event) => setExportPreset(event.target.value as "custom" | "spotify")}
+                className="mt-2 w-full rounded-lg bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white"
+              >
+                <option value="custom">Custom (square)</option>
+                <option value="spotify">Spotify Canvas (720x1280 @ 24 fps, 8s)</option>
+              </select>
+            </label>
+            {exportPreset !== "spotify" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <label className="text-sm text-zinc-400">
+                  Resolution
+                  <select
+                    value={exportResolution}
+                    onChange={(event) => setExportResolution(parseInt(event.target.value, 10))}
+                    className="mt-2 w-full rounded-lg bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white"
+                  >
+                    <option value={720}>720p (720x720)</option>
+                    <option value={1080}>1080p (1080x1080)</option>
+                  </select>
+                </label>
+                <label className="text-sm text-zinc-400">
+                  FPS
+                  <select
+                    value={exportFps}
+                    onChange={(event) => setExportFps(parseInt(event.target.value, 10))}
+                    className="mt-2 w-full rounded-lg bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white"
+                  >
+                    <option value={24}>24 fps</option>
+                    <option value={30}>30 fps</option>
+                  </select>
+                </label>
+              </div>
+            )}
+            {exportPreset === "spotify" && (
+              <p className="text-xs text-zinc-500">
+                Canvas preset uses 720x1280 @ 24 fps, capped to 8 seconds (192 frames). Use a
+                9:16 portrait image to prevent extra padding.
+              </p>
+            )}
+            {exportPreset === "spotify" && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs text-zinc-400">
+                  <span>Segment (3-8s)</span>
+                  {editingSegment ? (
+                    <div
+                      className="flex items-center gap-1"
+                      onBlur={(event) => {
+                        if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+                          setEditingSegment(false);
+                        }
+                      }}
+                    >
+                      <input
+                        type="number"
+                        min={0}
+                        max={spotifyRangeMax}
+                        step={0.1}
+                        value={Number.isFinite(spotifyStartSec) ? spotifyStartSec : 0}
+                        onChange={(event) => {
+                          const raw = parseFloat(event.target.value);
+                          if (Number.isNaN(raw)) return;
+                          applySpotifyStart(raw);
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === "Escape") {
+                            setEditingSegment(false);
+                            event.currentTarget.blur();
+                          }
+                        }}
+                        className="w-14 rounded-md bg-zinc-900 border border-zinc-700 px-1 py-0.5 text-right text-xs text-white"
+                      />
+                      <span className="text-zinc-500">s -</span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={spotifyRangeMax}
+                        step={0.1}
+                        value={Number.isFinite(spotifyEndSec) ? spotifyEndSec : 0}
+                        onChange={(event) => {
+                          const raw = parseFloat(event.target.value);
+                          if (Number.isNaN(raw)) return;
+                          applySpotifyEnd(raw);
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === "Escape") {
+                            setEditingSegment(false);
+                            event.currentTarget.blur();
+                          }
+                        }}
+                        className="w-14 rounded-md bg-zinc-900 border border-zinc-700 px-1 py-0.5 text-right text-xs text-white"
+                      />
+                      <span className="text-zinc-500">s</span>
+                      <span className="text-zinc-500">({spotifySegmentDuration.toFixed(1)}s)</span>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setEditingSegment(true)}
+                      className="text-zinc-400 hover:text-zinc-200 transition"
+                    >
+                      {spotifyStartSec.toFixed(1)}s - {spotifyEndSec.toFixed(1)}s (
+                      {spotifySegmentDuration.toFixed(1)}s)
+                    </button>
+                  )}
+                </div>
+                <div className="relative h-8">
+                  <div className="absolute left-0 right-0 top-1/2 h-2 -translate-y-1/2 rounded-full bg-zinc-800" />
+                  <div
+                    className="absolute top-1/2 h-2 -translate-y-1/2 rounded-full bg-emerald-500/60"
+                    style={{ left: `${spotifyStartPercent}%`, right: `${100 - spotifyEndPercent}%` }}
+                  />
+                  <input
+                    type="range"
+                    min={0}
+                    max={spotifyRangeMax}
+                    step={0.1}
+                    value={spotifyStartSec}
+                    onChange={(event) => {
+                      const raw = parseFloat(event.target.value);
+                      applySpotifyStart(raw);
+                    }}
+                    className="range-input absolute inset-0 w-full accent-emerald-400 bg-transparent"
+                  />
+                  <input
+                    type="range"
+                    min={0}
+                    max={spotifyRangeMax}
+                    step={0.1}
+                    value={spotifyEndSec}
+                    onChange={(event) => {
+                      const raw = parseFloat(event.target.value);
+                      applySpotifyEnd(raw);
+                    }}
+                    className="range-input absolute inset-0 w-full accent-emerald-400 bg-transparent"
+                  />
+                </div>
+                <div className="flex justify-between text-xs text-zinc-500">
+                  <span>0s</span>
+                  <span>{spotifyRangeMax.toFixed(1)}s</span>
+                </div>
+              </div>
+            )}
 
             <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={!audioFile || !imageDataUrl || exportStatus === "running"}
+                onClick={handlePreview}
+                className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                  !audioFile || !imageDataUrl || exportStatus === "running"
+                    ? "bg-zinc-800 text-zinc-500 cursor-not-allowed"
+                    : "bg-indigo-500 hover:bg-indigo-600 text-white"
+                }`}
+              >
+                {previewing ? "Previewing..." : "Preview"}
+              </button>
               <button
                 type="button"
                 disabled={!exportEnabled}
@@ -673,6 +1355,43 @@ export default function CoverLedPage() {
           </div>
         </section>
       </main>
+
+      <style jsx>{`
+        .range-input {
+          -webkit-appearance: none;
+          appearance: none;
+          background: transparent;
+          pointer-events: none;
+        }
+        .range-input::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 14px;
+          height: 14px;
+          border-radius: 9999px;
+          background: #34d399;
+          border: 2px solid #0f172a;
+          pointer-events: auto;
+          box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.15);
+        }
+        .range-input::-moz-range-thumb {
+          width: 14px;
+          height: 14px;
+          border-radius: 9999px;
+          background: #34d399;
+          border: 2px solid #0f172a;
+          pointer-events: auto;
+          box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.15);
+        }
+        .range-input::-webkit-slider-runnable-track {
+          height: 2px;
+          background: transparent;
+        }
+        .range-input::-moz-range-track {
+          height: 2px;
+          background: transparent;
+        }
+      `}</style>
     </div>
   );
 }

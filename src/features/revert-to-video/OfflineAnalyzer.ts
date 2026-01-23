@@ -24,7 +24,13 @@ export class OfflineAnalyzer {
   async analyze(
     audioBuffer: ArrayBuffer,
     onProgress: (p: OfflineAnalyzerProgress) => void = () => {}
-  ): Promise<{ frames: AudioFrame[]; duration: number; sampleRate: number; totalFrames: number }> {
+  ): Promise<{
+    frames: AudioFrame[];
+    duration: number;
+    sampleRate: number;
+    totalFrames: number;
+    decodedBuffer: AudioBuffer;
+  }> {
     const AudioContextCtor =
       window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!AudioContextCtor) {
@@ -68,7 +74,7 @@ export class OfflineAnalyzer {
 
     audioContext.close();
 
-    return { frames, duration, sampleRate, totalFrames };
+    return { frames, duration, sampleRate, totalFrames, decodedBuffer: decodedData };
   }
 
   private async analyzeFrames(

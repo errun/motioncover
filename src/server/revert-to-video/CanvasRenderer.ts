@@ -33,6 +33,7 @@ interface Image {
 
 interface CanvasRenderingContext2D {
   fillStyle: string;
+  filter?: string;
   fillRect(x: number, y: number, w: number, h: number): void;
   save(): void;
   restore(): void;
@@ -69,6 +70,8 @@ export class CanvasRenderer {
   private ctx: CanvasRenderingContext2D | null = null;
   private image: Image | null = null;
   private coverParams: CoverParams | null = null;
+  private containParams: CoverParams | null = null;
+  private backdropColor = "#000";
   private initialized = false;
 
   constructor(options: { width: number; height: number }) {
@@ -88,30 +91,81 @@ export class CanvasRenderer {
     await this.ensureInitialized();
     const { loadImage } = await getCanvasModule();
     this.image = await loadImage(source);
-    this.calculateCoverParams();
+    await this.calculateCoverParams();
   }
 
-  private calculateCoverParams() {
+  private async calculateCoverParams() {
     if (!this.image) return;
     const canvasAspect = this.width / this.height;
     const imageAspect = this.image.width / this.image.height;
 
-    let drawWidth = this.width;
-    let drawHeight = this.height;
-    let offsetX = 0;
-    let offsetY = 0;
+    let coverWidth = this.width;
+    let coverHeight = this.height;
+    let coverOffsetX = 0;
+    let coverOffsetY = 0;
 
     if (imageAspect > canvasAspect) {
-      drawHeight = this.height;
-      drawWidth = this.height * imageAspect;
-      offsetX = (this.width - drawWidth) / 2;
+      coverHeight = this.height;
+      coverWidth = this.height * imageAspect;
+      coverOffsetX = (this.width - coverWidth) / 2;
     } else {
-      drawWidth = this.width;
-      drawHeight = this.width / imageAspect;
-      offsetY = (this.height - drawHeight) / 2;
+      coverWidth = this.width;
+      coverHeight = this.width / imageAspect;
+      coverOffsetY = (this.height - coverHeight) / 2;
     }
 
-    this.coverParams = { drawWidth, drawHeight, offsetX, offsetY };
+    let containWidth = this.width;
+    let containHeight = this.height;
+    let containOffsetX = 0;
+    let containOffsetY = 0;
+
+    if (imageAspect > canvasAspect) {
+      containWidth = this.width;
+      containHeight = this.width / imageAspect;
+      containOffsetY = (this.height - containHeight) / 2;
+    } else {
+      containHeight = this.height;
+      containWidth = this.height * imageAspect;
+      containOffsetX = (this.width - containWidth) / 2;
+    }
+
+    this.coverParams = {
+      drawWidth: coverWidth,
+      drawHeight: coverHeight,
+      offsetX: coverOffsetX,
+      offsetY: coverOffsetY,
+    };
+    this.containParams = {
+      drawWidth: containWidth,
+      drawHeight: containHeight,
+      offsetX: containOffsetX,
+      offsetY: containOffsetY,
+    };
+    this.backdropColor = await this.computeAverageColor();
+  }
+
+  private async computeAverageColor() {
+    if (!this.image) return "#000";
+    const { createCanvas } = await getCanvasModule();
+    const sampleCanvas = createCanvas(8, 8);
+    const sampleCtx = sampleCanvas.getContext("2d");
+    sampleCtx.drawImage(this.image, 0, 0, 8, 8);
+    const data = sampleCtx.getImageData(0, 0, 8, 8).data;
+    let r = 0;
+    let g = 0;
+    let b = 0;
+    const total = data.length / 4;
+
+    for (let i = 0; i < data.length; i += 4) {
+      r += data[i];
+      g += data[i + 1];
+      b += data[i + 2];
+    }
+
+    const avgR = Math.round(r / total);
+    const avgG = Math.round(g / total);
+    const avgB = Math.round(b / total);
+    return `rgb(${avgR}, ${avgG}, ${avgB})`;
   }
 
   renderFrame({ frameIndex, time, audioData, effects }: RenderParams) {
@@ -120,8 +174,9 @@ export class CanvasRenderer {
     }
     const { low, high } = audioData;
     const ctx = this.ctx;
+    const isLetterbox = this.height > this.width && this.coverParams && this.containParams;
 
-    ctx.fillStyle = "#000";
+    ctx.fillStyle = this.backdropColor;
     ctx.fillRect(0, 0, this.width, this.height);
 
     const breathScale = 1 + low * (effects.breathing?.scale || 0.15);
@@ -135,6 +190,33 @@ export class CanvasRenderer {
       ctx.translate(-this.width / 2, -this.height / 2);
       const { drawWidth, drawHeight, offsetX, offsetY } = this.coverParams;
       ctx.drawImage(this.image, offsetX, offsetY, drawWidth, drawHeight);
+      ctx.restore();
+    }
+
+    if (this.image && isLetterbox && this.containParams) {
+      ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
+      ctx.fillRect(0, 0, this.width, this.height);
+
+      const contain = this.containParams;
+      const blurScale = 1.04;
+      const blurWidth = contain.drawWidth * blurScale;
+      const blurHeight = contain.drawHeight * blurScale;
+      const blurX = contain.offsetX - (blurWidth - contain.drawWidth) / 2;
+      const blurY = contain.offsetY - (blurHeight - contain.drawHeight) / 2;
+
+      ctx.save();
+      ctx.translate(this.width / 2, this.height / 2);
+      ctx.scale(totalScale, totalScale);
+      ctx.translate(-this.width / 2, -this.height / 2);
+
+      if (typeof ctx.filter === "string") {
+        ctx.filter = "blur(12px)";
+      }
+      ctx.drawImage(this.image, blurX, blurY, blurWidth, blurHeight);
+      if (typeof ctx.filter === "string") {
+        ctx.filter = "none";
+      }
+      ctx.drawImage(this.image, contain.offsetX, contain.offsetY, contain.drawWidth, contain.drawHeight);
       ctx.restore();
     }
 
@@ -237,5 +319,6 @@ export class CanvasRenderer {
   dispose() {
     this.image = null;
     this.coverParams = null;
+    this.containParams = null;
   }
 }

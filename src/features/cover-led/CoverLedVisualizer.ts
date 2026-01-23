@@ -22,6 +22,7 @@ export class CoverLedVisualizer {
   private isDisposed = false;
   private isFallback = false;
   private imageUrl: string;
+  private fitMode: "cover" | "letterbox" = "cover";
 
   constructor(container: HTMLElement, imageUrl: string) {
     this.container = container;
@@ -96,6 +97,7 @@ export class CoverLedVisualizer {
         uAudioHigh: { value: 0 },
         uResolution: { value: [width, height] },
         uImageResolution: { value: [this.imageResolution.width, this.imageResolution.height] },
+        uFitMode: { value: this.fitMode === "letterbox" ? 1 : 0 },
       },
     });
 
@@ -166,6 +168,14 @@ export class CoverLedVisualizer {
     this.setHigh(value);
   }
 
+  setFitMode(mode: "cover" | "letterbox") {
+    this.fitMode = mode;
+    if (this.program) {
+      this.program.uniforms.uFitMode.value = mode === "letterbox" ? 1 : 0;
+    }
+    this.applyFallbackStyle();
+  }
+
   async updateImage(url: string) {
     if (this.isDisposed || this.isFallback) return;
     try {
@@ -230,8 +240,20 @@ export class CoverLedVisualizer {
     const img = document.createElement("img");
     img.src = this.imageUrl;
     img.alt = "Cover";
-    img.style.cssText = "width:100%;height:100%;object-fit:cover;display:block;";
+    img.style.cssText = "width:100%;height:100%;display:block;";
     this.container.appendChild(img);
     this.fallbackImg = img;
+    this.applyFallbackStyle();
+  }
+
+  private applyFallbackStyle() {
+    if (!this.fallbackImg) return;
+    if (this.fitMode === "letterbox") {
+      this.fallbackImg.style.objectFit = "contain";
+      this.fallbackImg.style.backgroundColor = "#0a0a0a";
+    } else {
+      this.fallbackImg.style.objectFit = "cover";
+      this.fallbackImg.style.backgroundColor = "transparent";
+    }
   }
 }

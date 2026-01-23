@@ -36,6 +36,7 @@ export const fragmentShader = /* glsl */ `
   uniform float uAudioHigh;
   uniform vec2 uResolution;
   uniform vec2 uImageResolution;
+  uniform float uFitMode;
 
   varying vec2 vUv;
   varying float vDisplacement;
@@ -55,6 +56,23 @@ export const fragmentShader = /* glsl */ `
     vec2 ratio = vec2(
       min(canvasAspect / imageAspect, 1.0),
       min(imageAspect / canvasAspect, 1.0)
+    );
+
+    vec2 newUv = uv;
+    newUv -= 0.5;
+    newUv *= ratio;
+    newUv += 0.5;
+
+    return newUv;
+  }
+
+  vec2 containUV(vec2 uv, vec2 canvasRes, vec2 imageRes) {
+    float canvasAspect = canvasRes.x / canvasRes.y;
+    float imageAspect = imageRes.x / imageRes.y;
+
+    vec2 ratio = vec2(
+      max(canvasAspect / imageAspect, 1.0),
+      max(imageAspect / canvasAspect, 1.0)
     );
 
     vec2 newUv = uv;
@@ -106,18 +124,44 @@ export const fragmentShader = /* glsl */ `
   }
 
   void main() {
-    vec2 uv = coverUV(vUv, uResolution, uImageResolution);
-
     float zoom = 1.0 - uAudioMid * 0.05;
-    uv = (uv - 0.5) * zoom + 0.5;
+    vec2 baseUv = (vUv - 0.5) * zoom + 0.5;
+    vec2 uvCover = coverUV(baseUv, uResolution, uImageResolution);
+    vec2 uvContain = containUV(baseUv, uResolution, uImageResolution);
 
     float aberration = uAudioHigh * 0.02;
 
-    float r = texture2D(uTexture, uv + vec2(aberration, 0.0)).r;
-    float g = texture2D(uTexture, uv).g;
-    float b = texture2D(uTexture, uv - vec2(aberration, 0.0)).b;
+    float coverR = texture2D(uTexture, uvCover + vec2(aberration, 0.0)).r;
+    float coverG = texture2D(uTexture, uvCover).g;
+    float coverB = texture2D(uTexture, uvCover - vec2(aberration, 0.0)).b;
+    vec3 coverColor = vec3(coverR, coverG, coverB);
 
-    vec3 color = vec3(r, g, b);
+    float containR = texture2D(uTexture, uvContain + vec2(aberration, 0.0)).r;
+    float containG = texture2D(uTexture, uvContain).g;
+    float containB = texture2D(uTexture, uvContain - vec2(aberration, 0.0)).b;
+    vec3 containColor = vec3(containR, containG, containB);
+
+    vec2 texel = 1.0 / uImageResolution;
+    vec3 containBlur =
+      (containColor +
+        texture2D(uTexture, uvContain + vec2(texel.x, 0.0)).rgb +
+        texture2D(uTexture, uvContain - vec2(texel.x, 0.0)).rgb +
+        texture2D(uTexture, uvContain + vec2(0.0, texel.y)).rgb +
+        texture2D(uTexture, uvContain - vec2(0.0, texel.y)).rgb) / 5.0;
+
+    float insideX = step(0.0, uvContain.x) * step(uvContain.x, 1.0);
+    float insideY = step(0.0, uvContain.y) * step(uvContain.y, 1.0);
+    float inside = insideX * insideY;
+    float edge = min(min(uvContain.x, uvContain.y), min(1.0 - uvContain.x, 1.0 - uvContain.y));
+    float edgeFeather = smoothstep(0.0, 0.08, edge);
+    float blurMix = 1.0 - smoothstep(0.02, 0.12, edge);
+    vec3 containSoft = mix(containColor, containBlur, blurMix);
+
+    vec3 background = coverColor * 0.65;
+    vec3 letterboxColor = mix(background, containSoft, inside * edgeFeather);
+
+    float fitMode = step(0.5, uFitMode);
+    vec3 color = mix(coverColor, letterboxColor, fitMode);
 
     float breathBrightness = 1.0 + uAudioLow * 0.8;
     color *= breathBrightness;

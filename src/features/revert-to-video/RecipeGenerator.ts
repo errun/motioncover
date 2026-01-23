@@ -24,11 +24,17 @@ export class RecipeGenerator {
     audioFile,
     imageFile,
     effects,
+    maxDurationSec,
+    segmentStartSec,
+    segmentDurationSec,
     onProgress = () => {},
   }: {
     audioFile: File | ArrayBuffer;
     imageFile: File | string;
     effects?: EffectConfig;
+    maxDurationSec?: number;
+    segmentStartSec?: number;
+    segmentDurationSec?: number;
     onProgress?: (p: GenerateProgress) => void;
   }): Promise<VideoRecipe> {
     onProgress({ stage: "preparing", progress: 0 });
@@ -56,14 +62,37 @@ export class RecipeGenerator {
 
     onProgress({ stage: "generating", progress: 0.8 });
 
+    const startSec = Math.max(0, segmentStartSec ?? 0);
+    const fallbackDuration = maxDurationSec ?? audioResult.duration - startSec;
+    const requestedDuration =
+      typeof segmentDurationSec === "number" ? segmentDurationSec : fallbackDuration;
+    const availableDuration = Math.max(0, audioResult.duration - startSec);
+    const segmentDuration = Math.max(0, Math.min(requestedDuration, availableDuration));
+
+    const startFrame = Math.max(0, Math.floor(startSec * this.fps));
+    const maxFrames = Math.max(1, Math.floor(segmentDuration * this.fps));
+    const endFrame = Math.min(audioResult.totalFrames, startFrame + maxFrames);
+    let trimmedFrames = audioResult.frames.slice(startFrame, endFrame);
+    if (trimmedFrames.length === 0 && audioResult.frames.length > 0) {
+      const fallbackFrame = audioResult.frames[Math.min(startFrame, audioResult.frames.length - 1)];
+      trimmedFrames = [fallbackFrame];
+    }
+    const trimmedDuration = trimmedFrames.length / this.fps;
+
+    if (startSec > 0 || segmentDuration < audioResult.duration - 0.01) {
+      const slicedBuffer = this.sliceAudioBuffer(audioResult.decodedBuffer, startSec, trimmedDuration);
+      const wavBuffer = this.audioBufferToWav(slicedBuffer);
+      audioDataUrl = await this.arrayBufferToBase64(wavBuffer, "audio/wav");
+    }
+
     const recipe: VideoRecipe = {
       version: "1.0",
       meta: {
-        duration: audioResult.duration,
+        duration: trimmedDuration,
         fps: this.fps,
         width: this.width,
         height: this.height,
-        totalFrames: audioResult.totalFrames,
+        totalFrames: trimmedFrames.length,
       },
       audio: {
         source: audioDataUrl,
@@ -74,7 +103,7 @@ export class RecipeGenerator {
         width: imageData.width,
         height: imageData.height,
       },
-      frames: audioResult.frames,
+      frames: trimmedFrames,
       effects: effects || createDefaultEffects(),
     };
 
@@ -150,12 +179,85 @@ export class RecipeGenerator {
     });
   }
 
-  private arrayBufferToBase64(buffer: ArrayBuffer): Promise<string> {
+  private arrayBufferToBase64(buffer: ArrayBuffer, mimeType?: string): Promise<string> {
     return new Promise((resolve) => {
-      const blob = new Blob([buffer]);
+      const blob = new Blob([buffer], mimeType ? { type: mimeType } : undefined);
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result as string);
       reader.readAsDataURL(blob);
     });
+  }
+
+  private sliceAudioBuffer(buffer: AudioBuffer, startSec: number, durationSec: number) {
+    const sampleRate = buffer.sampleRate;
+    const startSample = Math.max(0, Math.floor(startSec * sampleRate));
+    const endSample = Math.min(buffer.length, Math.floor((startSec + durationSec) * sampleRate));
+    const frameCount = Math.max(1, endSample - startSample);
+    const channels = buffer.numberOfChannels;
+
+    const AudioContextCtor =
+      window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    const context = AudioContextCtor ? new AudioContextCtor() : null;
+    const sliced = context
+      ? context.createBuffer(channels, frameCount, sampleRate)
+      : new AudioBuffer({ length: frameCount, numberOfChannels: channels, sampleRate });
+
+    for (let channel = 0; channel < channels; channel += 1) {
+      const input = buffer.getChannelData(channel);
+      const output = sliced.getChannelData(channel);
+      output.set(input.slice(startSample, endSample));
+    }
+
+    if (context && "close" in context) {
+      context.close();
+    }
+
+    return sliced;
+  }
+
+  private audioBufferToWav(buffer: AudioBuffer): ArrayBuffer {
+    const numChannels = buffer.numberOfChannels;
+    const sampleRate = buffer.sampleRate;
+    const format = 1;
+    const bitDepth = 16;
+    const samples = buffer.length;
+    const blockAlign = (numChannels * bitDepth) / 8;
+    const byteRate = sampleRate * blockAlign;
+    const dataSize = samples * blockAlign;
+    const bufferSize = 44 + dataSize;
+    const arrayBuffer = new ArrayBuffer(bufferSize);
+    const view = new DataView(arrayBuffer);
+
+    const writeString = (offset: number, text: string) => {
+      for (let i = 0; i < text.length; i += 1) {
+        view.setUint8(offset + i, text.charCodeAt(i));
+      }
+    };
+
+    writeString(0, "RIFF");
+    view.setUint32(4, 36 + dataSize, true);
+    writeString(8, "WAVE");
+    writeString(12, "fmt ");
+    view.setUint32(16, 16, true);
+    view.setUint16(20, format, true);
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, byteRate, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, bitDepth, true);
+    writeString(36, "data");
+    view.setUint32(40, dataSize, true);
+
+    let offset = 44;
+    for (let i = 0; i < samples; i += 1) {
+      for (let channel = 0; channel < numChannels; channel += 1) {
+        const sample = buffer.getChannelData(channel)[i];
+        const clamped = Math.max(-1, Math.min(1, sample));
+        view.setInt16(offset, clamped < 0 ? clamped * 0x8000 : clamped * 0x7fff, true);
+        offset += 2;
+      }
+    }
+
+    return arrayBuffer;
   }
 }
