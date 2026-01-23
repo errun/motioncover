@@ -801,7 +801,7 @@ export default function CoverLedPage() {
               />
               <button
                 type="button"
-                onClick={handleSpotifyImport}
+                onClick={() => handleSpotifyImport()}
                 disabled={spotifyLoading}
                 className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
                   spotifyLoading ? "bg-zinc-800 text-zinc-500" : "bg-emerald-500 text-white hover:bg-emerald-600"
