@@ -33,13 +33,16 @@ export class VideoExporter {
     });
   }
 
-  async export({
+  async enqueue({
     audioFile,
     imageFile,
     effects,
     maxDurationSec,
     segmentStartSec,
     segmentDurationSec,
+    rhythmMode,
+    bpm,
+    title,
     onProgress = () => {},
   }: {
     audioFile: File;
@@ -48,43 +51,88 @@ export class VideoExporter {
     maxDurationSec?: number;
     segmentStartSec?: number;
     segmentDurationSec?: number;
+    rhythmMode?: "beat" | "bpm";
+    bpm?: number;
+    title?: string;
+    onProgress?: (p: ExportProgress) => void;
+  }): Promise<{ jobId: string; wsUrl: string | null }> {
+    onProgress({ stage: "recipe", message: "Analyzing audio...", progress: 0 });
+
+    const recipe = await this.generator.generate({
+      audioFile,
+      imageFile,
+      effects,
+      maxDurationSec,
+      segmentStartSec,
+      segmentDurationSec,
+      rhythmMode,
+      bpm,
+      title,
+      onProgress: (p) => {
+        onProgress({
+          stage: "recipe",
+          message: this.getRecipeMessage(p.stage),
+          progress: p.progress * 0.3,
+        });
+      },
+    });
+
+    onProgress({ stage: "upload", message: "Uploading...", progress: 0.3 });
+
+    const baseUrl = this.serverUrl || "";
+    const response = await fetch(`${baseUrl}/api/render`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ recipe }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || error.error || "Failed to submit render job");
+    }
+
+    const { jobId, wsUrl } = (await response.json()) as { jobId: string; wsUrl: string | null };
+    this.currentJobId = jobId;
+    return { jobId, wsUrl };
+  }
+
+  async export({
+    audioFile,
+    imageFile,
+    effects,
+    maxDurationSec,
+    segmentStartSec,
+    segmentDurationSec,
+    rhythmMode,
+    bpm,
+    title,
+    onProgress = () => {},
+  }: {
+    audioFile: File;
+    imageFile: File | string;
+    effects?: EffectConfig;
+    maxDurationSec?: number;
+    segmentStartSec?: number;
+    segmentDurationSec?: number;
+    rhythmMode?: "beat" | "bpm";
+    bpm?: number;
+    title?: string;
     onProgress?: (p: ExportProgress) => void;
   }): Promise<{ url: string; jobId: string }> {
     try {
-      onProgress({ stage: "recipe", message: "Analyzing audio...", progress: 0 });
-
-      const recipe = await this.generator.generate({
+      const baseUrl = this.serverUrl || "";
+      const { jobId, wsUrl } = await this.enqueue({
         audioFile,
         imageFile,
         effects,
         maxDurationSec,
         segmentStartSec,
         segmentDurationSec,
-        onProgress: (p) => {
-          onProgress({
-            stage: "recipe",
-            message: this.getRecipeMessage(p.stage),
-            progress: p.progress * 0.3,
-          });
-        },
+        rhythmMode,
+        bpm,
+        title,
+        onProgress,
       });
-
-      onProgress({ stage: "upload", message: "Uploading...", progress: 0.3 });
-
-      const baseUrl = this.serverUrl || "";
-      const response = await fetch(`${baseUrl}/api/render`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recipe }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.message || error.error || "Failed to submit render job");
-      }
-
-      const { jobId, wsUrl } = (await response.json()) as { jobId: string; wsUrl: string | null };
-      this.currentJobId = jobId;
 
       return await new Promise((resolve, reject) => {
         if (!wsUrl) {
@@ -178,7 +226,7 @@ export class VideoExporter {
       const baseUrl = this.serverUrl || "";
       const response = await fetch(`${baseUrl}/api/render/${jobId}`);
       const job = (await response.json()) as {
-        status: "pending" | "rendering" | "completed" | "failed";
+        status: "pending" | "rendering" | "completed" | "failed" | "cancelled";
         progress?: number;
         eta?: number;
         outputPath?: string;
@@ -193,8 +241,8 @@ export class VideoExporter {
         });
         const fileName = job.outputPath ? job.outputPath.split(/[\\/]/).pop() : `${jobId}.mp4`;
         resolve({ url: `${baseUrl}/api/download/${fileName}`, jobId });
-      } else if (job.status === "failed") {
-        reject(new Error(job.error || "Render failed"));
+      } else if (job.status === "failed" || job.status === "cancelled") {
+        reject(new Error(job.error || "Render cancelled"));
       } else {
         // Update progress for pending or rendering status
         const percent = job.progress ?? 0;

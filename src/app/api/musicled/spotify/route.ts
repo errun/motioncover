@@ -1,11 +1,21 @@
 import { NextRequest } from "next/server";
-import { extractTrackId } from "@/features/spotify-core";
+import { extractTrackId, getAccessToken } from "@/features/spotify-core";
 import { fetchWithTimeout } from "@/lib/httpClient";
 
 export const runtime = "nodejs";
 
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+
+type SpotifyTrackResponse = {
+  id: string;
+  name: string;
+  artists: { name: string }[];
+  album: { images: { url: string; width: number; height: number }[] };
+  preview_url: string | null;
+  duration_ms: number;
+  external_urls: { spotify: string };
+};
 
 const decodeUrl = (value: string) => {
   try {
@@ -193,6 +203,32 @@ export async function GET(request: NextRequest) {
   const trackId = extractTrackId(link);
   if (!trackId) {
     return Response.json({ error: "Invalid Spotify link" }, { status: 400 });
+  }
+
+  const token = await getAccessToken();
+  if (token) {
+    const response = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (response.ok) {
+      const track = (await response.json()) as SpotifyTrackResponse;
+      const previewUrl = track.preview_url ?? (await (async () => {
+        const html = await fetchTrackHtml(trackId);
+        const htmlData = html ? parseTrackHtml(html) : null;
+        return htmlData?.previewUrl ?? null;
+      })());
+
+      return Response.json({
+        trackId: track.id,
+        name: track.name,
+        artists: track.artists.map((artist) => artist.name),
+        albumArt: track.album.images[0]?.url || null,
+        previewUrl,
+        spotifyUrl: track.external_urls.spotify,
+        durationMs: track.duration_ms,
+      });
+    }
   }
 
   const html = await fetchTrackHtml(trackId);

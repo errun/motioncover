@@ -6,6 +6,10 @@ const nextConfig: NextConfig = {
 	output: "standalone",
 	// 关闭开发环境左下角的 Next.js 指示图标
 	devIndicators: false,
+	experimental: {
+		// Raise client body size limit for large render payloads (audio/image data URLs).
+		proxyClientMaxBodySize: 100 * 1024 * 1024,
+	},
 	// 将原生模块标记为服务器外部包，避免 Turbopack 打包错误
 	serverExternalPackages: ["@napi-rs/canvas"],
 	images: {

@@ -27,6 +27,9 @@ export class RecipeGenerator {
     maxDurationSec,
     segmentStartSec,
     segmentDurationSec,
+    rhythmMode,
+    bpm,
+    title,
     onProgress = () => {},
   }: {
     audioFile: File | ArrayBuffer;
@@ -35,6 +38,9 @@ export class RecipeGenerator {
     maxDurationSec?: number;
     segmentStartSec?: number;
     segmentDurationSec?: number;
+    rhythmMode?: "beat" | "bpm";
+    bpm?: number;
+    title?: string;
     onProgress?: (p: GenerateProgress) => void;
   }): Promise<VideoRecipe> {
     onProgress({ stage: "preparing", progress: 0 });
@@ -79,6 +85,12 @@ export class RecipeGenerator {
     }
     const trimmedDuration = trimmedFrames.length / this.fps;
 
+    let outputFrames = trimmedFrames;
+    if (rhythmMode === "bpm") {
+      const bpmValue = typeof bpm === "number" && bpm > 0 ? bpm : 120;
+      outputFrames = this.generateBpmFrames(bpmValue, trimmedFrames.length);
+    }
+
     if (startSec > 0 || segmentDuration < audioResult.duration - 0.01) {
       const slicedBuffer = this.sliceAudioBuffer(audioResult.decodedBuffer, startSec, trimmedDuration);
       const wavBuffer = this.audioBufferToWav(slicedBuffer);
@@ -93,6 +105,7 @@ export class RecipeGenerator {
         width: this.width,
         height: this.height,
         totalFrames: trimmedFrames.length,
+        title: title || this.getTitleFromAudio(audioFile),
       },
       audio: {
         source: audioDataUrl,
@@ -103,7 +116,7 @@ export class RecipeGenerator {
         width: imageData.width,
         height: imageData.height,
       },
-      frames: trimmedFrames,
+      frames: outputFrames,
       effects: effects || createDefaultEffects(),
     };
 
@@ -168,6 +181,22 @@ export class RecipeGenerator {
     }
 
     return { dataUrl, width, height };
+  }
+
+  private generateBpmFrames(bpm: number, totalFrames: number) {
+    const frames = new Array(totalFrames);
+    const beatInterval = 60 / bpm;
+    for (let i = 0; i < totalFrames; i += 1) {
+      const time = i / this.fps;
+      const phase = (time % beatInterval) / beatInterval;
+      const pulse = Math.exp(-phase * 6);
+      frames[i] = {
+        low: Math.min(1, pulse),
+        mid: Math.min(1, pulse * 0.7),
+        high: Math.min(1, pulse * 0.5),
+      };
+    }
+    return frames;
   }
 
   private loadImage(src: string): Promise<HTMLImageElement> {
@@ -259,5 +288,14 @@ export class RecipeGenerator {
     }
 
     return arrayBuffer;
+  }
+
+  private getTitleFromAudio(audioFile: File | ArrayBuffer): string | undefined {
+    if (audioFile instanceof File && audioFile.name) {
+      const base = audioFile.name.replace(/\.[^/.]+$/, "");
+      const trimmed = base.trim();
+      return trimmed || undefined;
+    }
+    return undefined;
   }
 }

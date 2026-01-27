@@ -4,6 +4,7 @@ export type RecipeMeta = {
   width: number;
   height: number;
   totalFrames: number;
+  title?: string;
 };
 
 export type AudioSource = {

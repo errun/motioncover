@@ -70,7 +70,8 @@ export class FFmpegPipeline extends EventEmitter {
 
     this.process = spawn("ffmpeg", args, {
       stdio: ["pipe", "pipe", "pipe"],
-      shell: true,
+      shell: false,
+      windowsHide: true,
     });
 
     this.stderrBuffer = "";

@@ -60,6 +60,11 @@ npm run dev
 
 > 说明：未配置 `REPLICATE_API_TOKEN` 时，AI 相关功能会提示缺少配置或自动降级（视具体页面/功能而定）。
 
+### Docker / Zeabur 部署提示
+
+- Docker 本地运行请通过 `-e SPOTIFY_CLIENT_ID=... -e SPOTIFY_CLIENT_SECRET=...` 传入
+- Zeabur 部署请在服务的 Environment 里配置同名变量即可生效
+
 ## 常用脚本
 
 - `npm run dev`：开发模式

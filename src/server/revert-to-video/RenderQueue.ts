@@ -1,4 +1,6 @@
 import { EventEmitter } from "events";
+import fs from "fs/promises";
+import path from "path";
 import { FrameScheduler } from "./FrameScheduler";
 import type { VideoRecipe } from "@/features/revert-to-video/recipeTypes";
 import { randomUUID } from "crypto";
@@ -6,7 +8,7 @@ import { randomUUID } from "crypto";
 export type RenderJob = {
   id: string;
   recipe: VideoRecipe;
-  status: "pending" | "rendering" | "completed" | "failed";
+  status: "pending" | "rendering" | "completed" | "failed" | "cancelled";
   progress: number;
   createdAt: number;
   startedAt?: number;
@@ -14,6 +16,7 @@ export type RenderJob = {
   error?: string | null;
   eta?: number;
   outputPath?: string;
+  position?: number;
 };
 
 export class RenderQueue extends EventEmitter {
@@ -23,6 +26,7 @@ export class RenderQueue extends EventEmitter {
   private active: Map<string, RenderJob> = new Map();
   private completed: Map<string, RenderJob> = new Map();
   private schedulers: Map<string, FrameScheduler> = new Map();
+  private cancelled: Set<string> = new Set();
 
   constructor(options: { maxConcurrent: number; outputDir: string }) {
     super();
@@ -61,12 +65,18 @@ export class RenderQueue extends EventEmitter {
   cancel(jobId: string) {
     const queueIndex = this.queue.findIndex((job) => job.id === jobId);
     if (queueIndex !== -1) {
-      this.queue.splice(queueIndex, 1);
+      const [job] = this.queue.splice(queueIndex, 1);
+      if (job) {
+        job.status = "cancelled";
+        job.completedAt = Date.now();
+        this.completed.set(job.id, job);
+      }
       this.emit("cancelled", { jobId });
       return true;
     }
 
     if (this.schedulers.has(jobId)) {
+      this.cancelled.add(jobId);
       this.schedulers.get(jobId)?.cancel();
       return true;
     }
@@ -88,6 +98,42 @@ export class RenderQueue extends EventEmitter {
       pending: this.queue.length,
       active: this.active.size,
       completed: this.completed.size,
+    };
+  }
+
+  getSnapshot(limitCompleted = 20) {
+    const pending = this.queue.map((job, index) => ({
+      id: job.id,
+      status: job.status,
+      progress: job.progress,
+      createdAt: job.createdAt,
+      position: index + 1,
+    }));
+    const active = Array.from(this.active.values()).map((job) => ({
+      id: job.id,
+      status: job.status,
+      progress: job.progress,
+      createdAt: job.createdAt,
+      startedAt: job.startedAt,
+      eta: job.eta,
+    }));
+    const completed = Array.from(this.completed.values())
+      .sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0))
+      .slice(0, limitCompleted)
+      .map((job) => ({
+        id: job.id,
+        status: job.status,
+        progress: job.progress,
+        createdAt: job.createdAt,
+        completedAt: job.completedAt,
+        error: job.error,
+        outputPath: job.outputPath,
+      }));
+    return {
+      stats: this.getStats(),
+      pending,
+      active,
+      completed,
     };
   }
 
@@ -115,15 +161,21 @@ export class RenderQueue extends EventEmitter {
       const result = await scheduler.render(job.recipe, job.id);
       job.status = "completed";
       job.completedAt = Date.now();
-      job.outputPath = result.path;
+      job.outputPath = await this.maybeRenameOutput(result.path, job);
 
       this.active.delete(job.id);
       this.completed.set(job.id, job);
       this.schedulers.delete(job.id);
       this.emit("complete", { jobId: job.id, path: result.path });
     } catch (error) {
-      job.status = "failed";
-      job.error = error instanceof Error ? error.message : String(error);
+      if (this.cancelled.has(job.id)) {
+        job.status = "cancelled";
+        job.error = "Cancelled by user";
+        this.cancelled.delete(job.id);
+      } else {
+        job.status = "failed";
+        job.error = error instanceof Error ? error.message : String(error);
+      }
       this.active.delete(job.id);
       this.completed.set(job.id, job);
       this.schedulers.delete(job.id);
@@ -131,5 +183,69 @@ export class RenderQueue extends EventEmitter {
     }
 
     this.processQueue();
+  }
+
+  private async maybeRenameOutput(outputPath: string, job: RenderJob) {
+    if (!outputPath) return outputPath;
+    const dir = path.dirname(outputPath);
+    const desiredName = this.buildOutputFileName(job.recipe?.meta?.title, job.completedAt);
+    if (!desiredName) return outputPath;
+
+    const currentName = path.basename(outputPath);
+    if (currentName === desiredName) return outputPath;
+
+    let targetPath = path.join(dir, desiredName);
+    if (await this.fileExists(targetPath)) {
+      const suffix = job.id.slice(0, 6);
+      const base = desiredName.replace(/\.mp4$/i, "");
+      targetPath = path.join(dir, `${base}-${suffix}.mp4`);
+      if (await this.fileExists(targetPath)) {
+        return outputPath;
+      }
+    }
+
+    try {
+      await fs.rename(outputPath, targetPath);
+      return targetPath;
+    } catch {
+      return outputPath;
+    }
+  }
+
+  private async fileExists(filePath: string) {
+    try {
+      await fs.access(filePath);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private buildOutputFileName(title?: string, completedAt?: number) {
+    const base = this.sanitizeTitle(title);
+    const stamp = this.formatTimestamp(completedAt ? new Date(completedAt) : new Date());
+    return `${base}-${stamp}.mp4`;
+  }
+
+  private sanitizeTitle(title?: string) {
+    const raw = (title || "export").trim().toLowerCase();
+    const ascii = raw
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/_+/g, "_")
+      .replace(/^_+|_+$/g, "");
+    return ascii || "export";
+  }
+
+  private formatTimestamp(date: Date) {
+    const pad = (value: number) => String(value).padStart(2, "0");
+    const year = date.getFullYear();
+    const month = pad(date.getMonth() + 1);
+    const day = pad(date.getDate());
+    const hours = pad(date.getHours());
+    const minutes = pad(date.getMinutes());
+    const seconds = pad(date.getSeconds());
+    return `${year}${month}${day}${hours}${minutes}${seconds}`;
   }
 }

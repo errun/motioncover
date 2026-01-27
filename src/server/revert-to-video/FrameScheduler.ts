@@ -54,7 +54,8 @@ export class FrameScheduler extends EventEmitter {
     try {
       await fs.mkdir(this.outputDir, { recursive: true });
 
-      const outputPath = path.join(this.outputDir, `${jobId}.mp4`);
+      const outputFileName = this.buildOutputFileName(recipe.meta?.title);
+      const outputPath = path.join(this.outputDir, outputFileName);
       const audioPath = await this.extractAudio(recipe.audio, jobId);
 
       const renderer = new CanvasRenderer({
@@ -255,5 +256,33 @@ export class FrameScheduler extends EventEmitter {
 
     await fs.writeFile(audioPath, buffer);
     return audioPath;
+  }
+
+  private buildOutputFileName(title?: string) {
+    const base = this.sanitizeTitle(title);
+    const stamp = this.formatTimestamp();
+    return `${base}-${stamp}.mp4`;
+  }
+
+  private sanitizeTitle(title?: string) {
+    const raw = (title || "export").trim().toLowerCase();
+    const ascii = raw
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/_+/g, "_")
+      .replace(/^_+|_+$/g, "");
+    return ascii || "export";
+  }
+
+  private formatTimestamp(date = new Date()) {
+    const pad = (value: number) => String(value).padStart(2, "0");
+    const year = date.getFullYear();
+    const month = pad(date.getMonth() + 1);
+    const day = pad(date.getDate());
+    const hours = pad(date.getHours());
+    const minutes = pad(date.getMinutes());
+    const seconds = pad(date.getSeconds());
+    return `${year}${month}${day}${hours}${minutes}${seconds}`;
   }
 }
